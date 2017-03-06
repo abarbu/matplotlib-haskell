@@ -54,6 +54,7 @@ data Option =
   -- | just inserts the option verbatim as an argument at the end of the function
   | B String
 
+-- | Convert an 'MplotCommand' to python code, doesn't do much right now
 toPy (LoadData _) = error "withMplot needed to load data"
 toPy (Exec str)   = str
 
@@ -83,6 +84,7 @@ python codeStr =
              Right <$> readProcess "/usr/bin/python3" [codeFile] ""))
          (\e -> return $ Left $ show (e :: IOException))
 
+-- | The standard python includes of every plot
 pyIncludes = ["import matplotlib"
              -- TODO Provide a way to set the render backend
              -- ,"matplotlib.use('GtkAgg')"
@@ -99,15 +101,19 @@ pyIncludes = ["import matplotlib"
              ,"import random, datetime"
              ,"from matplotlib.dates import DateFormatter, WeekdayLocator"]
 
+-- | The python command that reads external data into the python data array
 pyReadData filename = ["data = json.loads(open('" ++ filename ++ "').read())"]
 
+-- | Detach python so we don't block (TODO This isn't working reliably)
 pyDetach = ["pid = os.fork()"
            ,"if(pid != 0):"
            ,"  exit(0)"]
 
+-- | Python code to show a plot
 pyOnscreen = ["plot.draw()"
              ,"plot.show()"]
 
+-- | Python code that saves a figure
 pyFigure output = ["plot.savefig('" ++ output ++ "')"]
 
 --- Running a plot
@@ -123,6 +129,7 @@ figure filename m = withMplot m (\str -> python $ pyIncludes ++ str ++ pyFigure 
 
 -- Creating matplotlib computations
 
+-- | Create a plot that executes the string as python code
 mplot s = Matplotlib [Exec s]
 
 infixl 5 %
@@ -187,6 +194,8 @@ options :: [Option] -> String
 options [] = ""
 options xs = "," # xs
 
+-- | Combine a list of user options with a default; useful for options such as
+-- line styles that require sane defaults but can be overriden.
 def o [] = [o]
 def o l@((B _):_) = l
 def o (x:xs) = x : def o xs
