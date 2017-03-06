@@ -8,3 +8,9 @@ fully-fledged plotting library!
 ![matplotlib contour plot](https://github.com/abarbu/matplotlib-haskell/raw/master/contour.png)
 
 More info and docs forthcoming.
+
+```haskell
+import Matplotlib
+
+onscreen $ contourF (\a b -> sin (degreesRadians a) + cos (degreesRadians b)) (-100) 100 (-200) 200 10
+```
