@@ -10,7 +10,7 @@ maintainer:          andrei@0xab.com
 copyright:           2017 Andrei Barbu
 category:            Graphics
 build-type:          Simple
-extra-source-files:  README.md contour.png
+extra-source-files:  README.md imgs/contour.png
 cabal-version:       >=1.10
 
 library
