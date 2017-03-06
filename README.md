@@ -14,3 +14,14 @@ import Matplotlib
 
 onscreen $ contourF (\a b -> sin (degreesRadians a) + cos (degreesRadians b)) (-100) 100 (-200) 200 10
 ```
+
+### Installation
+
+You will need several python libraries to run this code which can be installed
+on Ubuntu machines with the following command:
+
+```bash
+sudo apt-get install -y python3-matplotlib python3-numpy python-mpltoolkits.basemap
+```
+
+If you have instructions for other machines or OSes let me know.
