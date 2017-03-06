@@ -48,8 +48,11 @@ data MplotCommand
 
 -- | Throughout the API we need to accept options in order to expose
 -- matplotlib's many configuration options.
-data Option = K String String -- | results in a=b
-            | B String        -- | just inserts the option verbatim as an argument at the end of the function
+data Option =
+   -- | results in a=b
+  K String String
+  -- | just inserts the option verbatim as an argument at the end of the function
+  | B String
 
 toPy (LoadData _) = error "withMplot needed to load data"
 toPy (Exec str)   = str
