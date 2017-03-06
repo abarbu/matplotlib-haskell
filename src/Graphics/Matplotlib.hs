@@ -49,7 +49,7 @@ data MplotCommand
 -- | Throughout the API we need to accept options in order to expose
 -- matplotlib's many configuration options.
 data Option =
-   -- | results in a=b
+  -- | results in a=b
   K String String
   -- | just inserts the option verbatim as an argument at the end of the function
   | B String
@@ -342,7 +342,7 @@ subplotBars valuesList optsList =
        foldl1 (%) (zipWith3 (\vs opts i -> subplotDataBar i width (width * i) opts) valuesList optsList [0..]))
 
 -- | Add a title
-addTitle s opts = mplot $ "plot.title('" # s # options opts # "')"
+title s opts = mplot $ "plot.title('" # s # options opts # "')"
 
 -- | Set the spacing of ticks on the x axis
 axisXTickSpacing nr width opts = mplot $ "ax.set_xticks(np.arange(" # nr # ")+" # width # options opts # ")"
