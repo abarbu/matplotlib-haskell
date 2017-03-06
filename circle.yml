@@ -1,0 +1,13 @@
+dependencies:
+  cache_directories:
+    - "~/.stack"
+    - ".stack-work"
+  pre:
+    - curl -sSL https://get.haskellstack.org/ | sh
+  override:
+    - stack setup
+    - stack build --fast
+
+test:
+  override:
+    - stack test
