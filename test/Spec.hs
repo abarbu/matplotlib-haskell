@@ -12,7 +12,7 @@ tests = testGroup "Tests" [unitTests]
 tryit m = unsafePerformIO $ withSystemTempFile "a.png" (\file _ -> figure file m)
 
 unitTests = testGroup "Unit tests"
-  [ testCase "m1" $ tryit m7 @?= Right ""
+  [ testCase "m1" $ tryit m1 @?= Right ""
   , testCase "m2" $ tryit m2 @?= Right ""
   , testCase "m3" $ tryit m3 @?= Right ""
   , testCase "m4" $ tryit m4 @?= Right ""

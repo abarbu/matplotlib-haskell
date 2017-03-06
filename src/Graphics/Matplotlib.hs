@@ -77,10 +77,11 @@ python codeStr =
          (\codeFile codeHandle -> do
              forM_ codeStr (hPutStrLn codeHandle)
              hClose codeHandle
-             Right <$> readProcess "python3" [codeFile] ""))
+             Right <$> readProcess "/usr/bin/python3" [codeFile] ""))
          (\e -> return $ Left $ show (e :: IOException))
 
 pyIncludes = ["import matplotlib"
+             -- TODO Provide a way to set the render backend
              -- ,"matplotlib.use('GtkAgg')"
              ,"import matplotlib.path as mpath"
              ,"import matplotlib.patches as mpatches"
@@ -92,7 +93,7 @@ pyIncludes = ["import matplotlib"
              ,"import os"
              ,"import sys"
              ,"import json"
-             ,"import random, datetime, pylab"
+             ,"import random, datetime"
              ,"from matplotlib.dates import DateFormatter, WeekdayLocator"]
 
 pyReadData filename = ["data = json.loads(open('" ++ filename ++ "').read())"]
