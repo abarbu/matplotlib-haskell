@@ -5,6 +5,6 @@
 Haskell bindings to Python's Matplotlib. It's high time that Haskell had a
 fully-fledged plotting library!
 
-[matplotlib contour plot](https://github.com/abarbu/matplotlib-haskell/raw/master/img/contour.png)
+![matplotlib contour plot](https://github.com/abarbu/matplotlib-haskell/raw/master/contour.png)
 
 More info and docs forthcoming.
