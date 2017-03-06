@@ -1,0 +1,40 @@
+name:                matplotlib
+version:             0.1.0.0
+synopsis:            Bindings to Matplotlib; a Python plotting library
+description:         Matplotlib is probably the most full featured plotting library out there. These bindings provide a quick, easy, and extensible way to use it in Haskell. Type-safety is largely non-existent and sacrificed for maximum extensibility.
+homepage:            https://github.com/abarbu/matplotlib-haskell
+license:             BSD3
+license-file:        LICENSE
+author:              Andrei Barbu
+maintainer:          andrei@0xab.com
+copyright:           2017 Andrei Barbu
+category:            Graphics
+build-type:          Simple
+extra-source-files:  README.md
+cabal-version:       >=1.10
+
+library
+  hs-source-dirs:      src
+  exposed-modules:     Graphics.Matplotlib
+  build-depends:       base >= 4.7 && < 5
+                     , process
+                     , bytestring
+                     , aeson
+                     , temporary
+  default-language:    Haskell2010
+
+test-suite matplotlib-test
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      test
+  main-is:             Spec.hs
+  build-depends:       base
+                     , matplotlib
+                     , tasty
+                     , tasty-hunit
+                     , temporary
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+  default-language:    Haskell2010
+
+source-repository head
+  type:     git
+  location: https://github.com/abarbu/matplotlib-haskell
