@@ -313,3 +313,4 @@ minimum2 l = minimum $ minimum l
 -- | Largest element of a list of lists
 maximum2 :: (Ord (t a), Ord a, Foldable t1, Foldable t) => t1 (t a) -> a
 maximum2 l = maximum $ maximum l
+

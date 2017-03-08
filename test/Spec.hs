@@ -1,7 +1,11 @@
 {-# language ExtendedDefaultRules, ScopedTypeVariables, QuasiQuotes #-}
 
 import Test.Tasty
+import Test.Tasty.Options
+import Test.Tasty.Runners
+import Test.Tasty.Providers
 import Test.Tasty.HUnit
+import Test.Tasty.ExpectedFailure
 import System.IO.Unsafe
 import Graphics.Matplotlib
 import System.IO.Temp
@@ -9,6 +13,7 @@ import System.Random
 import Text.RawString.QQ
 import Data.List
 import Data.List.Split
+import Control.Monad
 
 -- * Random values for testing
 
@@ -90,7 +95,12 @@ normals' (mean, sigma) g = map (\x -> x * sigma + mean) $ normals
 main = defaultMain tests
 
 tests :: TestTree
-tests = testGroup "Tests" [unitTests]
+tests = testGroup "All tests" [basicTests, wrapTest (liftM (\x -> x { resultOutcome = Success
+                                                                   , resultShortDescription =
+                                                                       case resultOutcome x of
+                                                                         Success -> resultShortDescription x
+                                                                         _ -> "Expected: " ++ resultShortDescription x
+                                                                   })) $ fragileTests, ignoreTest failingTests]
 
 -- | Test one plot; right now we just test that the command executed without
 -- errors. We should visually compare plots somehow.
@@ -104,14 +114,12 @@ testPlot' name fn = testCase name $ tryit fn name @?= Right ""
           print c
           figure ("/tmp/imgs/" ++ name ++ ".png") fn
 
-unitTests = testGroup "Unit tests"
+basicTests = testGroup "Basic tests"
   [ testPlot "histogram" m1
   , testPlot "cumulative" m2
   , testPlot "scatter" m3
   , testPlot "contour" m4
   , testPlot "labelled-histogram" m5
-  -- TODO This test case is broken
-  -- , testPlot "sub-bars" m6
   , testPlot "density-bandwidth" m7
   , testPlot "density" m8
   , testPlot "line-function" m9
@@ -119,15 +127,24 @@ unitTests = testGroup "Unit tests"
   , testPlot "projections" m11
   , testPlot "line-options" m12
   , testPlot "corr" mxcorr
-  -- TODO Fails on circle ci (with latex)
-  -- , testPlot "tex" mtex
   , testPlot "show-matrix" mmat
   , testPlot "legend" mlegend
   , testPlot "hist2DLog" mhist2DLog
   , testPlot "eventplot" meventplot
   , testPlot "errorbar" merrorbar
-  -- TODO Fails on circle ci (labels is not valid)
-  -- , testPlot "boxplot" mboxplot
+  ]
+
+fragileTests = testGroup "Fragile tests"
+  [ -- TODO Fails on circle ci (with latex)
+    testPlot "tex" mtex
+    -- TODO Fails on circle ci (labels is not valid)
+  , testPlot "boxplot" mboxplot
+  ]
+
+failingTests = testGroup "Failing tests"
+  [
+    -- TODO This test case is broken
+    testPlot "sub-bars" m6
   ]
 
 -- * These tests are fully-reproducible, the output must be identical every time

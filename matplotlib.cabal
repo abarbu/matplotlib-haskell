@@ -40,6 +40,7 @@ test-suite matplotlib-test
                      , matplotlib
                      , tasty
                      , tasty-hunit
+                     , tasty-expected-failure
                      , temporary
                      , random
                      , raw-strings-qq
