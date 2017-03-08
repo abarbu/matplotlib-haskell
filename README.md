@@ -26,7 +26,7 @@ You will need several python libraries to run this code which can be installed
 on Ubuntu machines with the following command:
 
 ```bash
-sudo apt-get install -y python3-matplotlib python3-numpy python-mpltoolkits.basemap
+sudo apt-get install -y python3-pip python3-matplotlib python3-numpy python-mpltoolkits.basemap
 ```
 
 If you have instructions for other machines or OSes let me know. We require
