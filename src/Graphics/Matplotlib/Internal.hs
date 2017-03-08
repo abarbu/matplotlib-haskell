@@ -234,8 +234,8 @@ pyIncludes = ["import matplotlib"
              ,"import json"
              ,"import random, datetime"
              ,"from matplotlib.dates import DateFormatter, WeekdayLocator"
-             ,"ax = plot.figure().gca()"
-             ,"axes = [plot.figure().gca()]"]
+             ,"axes = [plot.figure().gca()]"
+             ,"ax = axes[0]"]
 
 -- | The python command that reads external data into the python data array
 pyReadData :: [Char] -> [[Char]]
@@ -261,3 +261,14 @@ o1 x = P x
 
 -- | Create a keyword option
 o2 x y = K x y
+
+-- | Update axes
+updateAxes = mp # "axes = plot.gcf().get_axes()"
+
+-- | Smallest element of a list of lists
+minimum2 :: (Ord (t a), Ord a, Foldable t1, Foldable t) => t1 (t a) -> a
+minimum2 l = minimum $ minimum l
+
+-- | Largest element of a list of lists
+maximum2 :: (Ord (t a), Ord a, Foldable t1, Foldable t) => t1 (t a) -> a
+maximum2 l = maximum $ maximum l

@@ -47,6 +47,10 @@
 --
 -- Right now there's no easy way to bind to an option other than the last one
 -- unless you want to pass options in as parameters.
+--
+-- The generated Python code should follow some invariants. It must maintain the
+-- current figure in "fig", all available axes in "axes", and the current axis
+-- in "ax".
 -----------------------------------------------------------------------------
 
 module Graphics.Matplotlib
@@ -96,7 +100,8 @@ histogram2D x y = readData [x,y] %
 
 -- | Plot the given values as a scatter plot
 scatter :: (ToJSON t1, ToJSON t) => t1 -> t -> Matplotlib
-scatter x y = plot x y `def` [o1 "'.'"]
+scatter x y = readData (x, y)
+  % mp # "axes[0].scatter(data[0], data[1]" ## ")"
 
 -- | Plot a line
 line :: (ToJSON t1, ToJSON t) => t1 -> t -> Matplotlib
@@ -167,12 +172,16 @@ density l maybeStartEnd =
 
 -- * Matplotlib configuration
 
+-- | Set an rcParams key-value
+setParameter k v = mp # "matplotlib.rcParams['"# k #"'] = " # v
+
+-- | Enable or disable TeX
 setTeX :: Bool -> Matplotlib
 setTeX b = mp # "matplotlib.rcParams['text.usetex'] = " # b
 
+-- | Enable or disable unicode
 setUnicode :: Bool -> Matplotlib
 setUnicode b = mp # "matplotlib.rcParams['text.latex.unicode'] = " # b
-
 
 -- * Basic plotting commands
 
@@ -184,10 +193,6 @@ dataPlot a b = mp # "p = plot.plot(data[" # a # "], data[" # b # "]" ## ")"
 plot :: (ToJSON t, ToJSON t1) => t1 -> t -> Matplotlib
 plot x y = readData (x, y) % dataPlot 0 1
 
--- | Show/hide grid lines
-grid :: Bool -> Matplotlib
-grid t = mp # "plot.gca().grid(" # t # ")"
-
 -- | Plot x against y where x is a date.
 --   xunit is something like 'weeks', yearStart, monthStart, dayStart are an offset to x.
 -- TODO This isn't general enough; it's missing some settings about the format. The call is also a mess.
@@ -198,18 +203,6 @@ dateLine x y xunit (yearStart, monthStart, dayStart) =
   % dataPlot 0 1 `def` [o1 "-"]
   % mp # "ax.xaxis.set_major_formatter(DateFormatter('%B'))"
   % mp # "ax.xaxis.set_minor_locator(WeekdayLocator(byweekday=6))"
-  
--- | Add a label to the x axis
-xLabel :: MplotValue val => val -> Matplotlib
-xLabel label = mp # "plot.xlabel(r'" # label # "'" ## ")"
-
--- | Add a label to the y axis
-yLabel :: MplotValue val => val -> Matplotlib
-yLabel label = mp # "plot.ylabel(r'" # label # "'" ## ")"
-
--- | Add a label to the z axis
-zLabel :: MplotValue val => val -> Matplotlib
-zLabel label = mp # "plot.zlabel(r'" # label # "'" ## ")"
 
 -- | Create a histogram for the 'a' entry of the data array
 dataHistogram :: (MplotValue val1, MplotValue val) => val1 -> val -> Matplotlib
@@ -238,10 +231,6 @@ projections xs ys zs =
   % contourRaw 0 1 2 (maximum2 xs) (maximum2 ys) (minimum2 zs)
   % axis3DLabels xs ys zs
 
--- | Enable 3D projection
-axis3DProjection :: Matplotlib
-axis3DProjection = mp # "ax = plot.gca(projection='3d')"
-
 -- | Plot a 3D wireframe accessing the given elements of the data array
 wireframe :: (MplotValue val2, MplotValue val1, MplotValue val) => val2 -> val1 -> val -> Matplotlib
 wireframe a b c = mp # "ax.plot_wireframe(np.array(data[" # a # "]), np.array(data[" # b # "]), np.array(data[" # c # "]), rstride=1, cstride=1)"
@@ -259,33 +248,10 @@ contourRaw a b c maxA maxB minC =
   % mp # "ax.contour(data[" # a # "], data[" # b # "], data[" # c # "], zdir='x', offset=-" # maxA # ")"
   % mp # "ax.contour(data[" # a # "], data[" # b # "], data[" # c # "], zdir='y', offset=" # maxB #")"
 
--- | Smallest element of a list of lists
-minimum2 :: (Ord (t a), Ord a, Foldable t1, Foldable t) => t1 (t a) -> a
-minimum2 l = minimum $ minimum l
--- | Largest element of a list of lists
-maximum2 :: (Ord (t a), Ord a, Foldable t1, Foldable t) => t1 (t a) -> a
-maximum2 l = maximum $ maximum l
-
--- | Label and set limits of a set of 3D axis
--- TODO This is a mess, does both more and less than it claims.
-axis3DLabels xs ys zs =
-  mp # "ax.set_xlabel('X')"
-  % mp # "ax.set_xlim3d(" # minimum2 xs # ", " # maximum2 xs # ")"
-  % mp # "ax.set_ylabel('Y')"
-  % mp # "ax.set_ylim3d(" # minimum2 ys # ", " # maximum2 ys # ")"
-  % mp # "ax.set_zlabel('Z')"
-  % mp # "ax.set_zlim3d(" # minimum2 zs # ", " # maximum2 zs # ")"
-
 -- | Draw a bag graph in a subplot
 -- TODO Why do we need this?
 subplotDataBar a width offset opts =
   mp # "ax.bar(np.arange(len(data[" # a # "]))+" # offset # ", data[" # a # "], " # width ## ")" @@ opts
-
--- | Create a subplot with the coordinates (r,c,f)
-addSubplot r c f = mp # "ax = plot.gcf().add_subplot(" # r # c # f ## ")"
-
--- | Access a subplot with the coordinates (r,c,f)
-getSubplot r c f = mp # "ax = plot.subplot(" # r # "," # c # "," # f ## ")"
 
 -- | The default bar with
 barDefaultWidth nr = 1.0 / (fromIntegral nr + 1)
@@ -304,55 +270,11 @@ subplotBars valuesList optsList =
   % (let width = barDefaultWidth (length valuesList) in
        foldl1 (%) (zipWith3 (\_ opts i -> subplotDataBar i width (width * i) opts) valuesList optsList [0..]))
 
--- | Add a title
-title :: MplotValue val => val -> Matplotlib
-title s = mp # "plot.title(r'" # s # "'" ## ")"
-
--- | Set the spacing of ticks on the x axis
-axisXTickSpacing :: (MplotValue val1, MplotValue val) => val1 -> val -> Matplotlib
-axisXTickSpacing nr width = mp # "ax.set_xticks(np.arange(" # nr # ")+" # width ## ")"
-
--- | Set the labels on the x axis
-axisXTickLabels :: MplotValue val => val -> Matplotlib
-axisXTickLabels labels = mp # "ax.set_xticklabels( (" # labels # ") " ## " )"
-
 -- | Update the data array to linearly interpolate between array entries
 interpolate :: (MplotValue val, MplotValue val2, MplotValue val1) => val2 -> val1 -> val -> Matplotlib
 interpolate a b n =
   (mp # "data[" # b # "] = mlab.stineman_interp(np.linspace(data[" # a # "][0],data[" # a # "][-1]," # n # "),data[" # a # "],data[" # b # "],None)")
   % (mp # "data[" # a # "] = np.linspace(data[" # a # "][0],data[" # a # "][-1]," # n # ")")
-
--- | Square up the aspect ratio of a plot.
-squareAxes :: Matplotlib
-squareAxes = mp # "plot.axes().set_aspect('equal')"
-
--- | Set the rotation of the labels on the x axis to the given number of degrees
-roateAxesLabels :: MplotValue val => val -> Matplotlib
-roateAxesLabels degrees = mp # "labels = plot.axes().get_xticklabels()"
-   % mp # "for label in labels:"
-   % mp # "    label.set_rotation("#degrees#")"
-
--- | Set the x labels to be vertical
-verticalAxes :: Matplotlib
-verticalAxes = mp # "labels = plot.axes().get_xticklabels()"
-   % mp # "for label in labels:"
-   % mp # "    label.set_rotation('vertical')"
-
--- | Set the x scale to be logarithmic
-logX :: Matplotlib
-logX = mp # "plot.axes().set_xscale('log')"
-
--- | Set the y scale to be logarithmic
-logY :: Matplotlib
-logY = mp # "plot.axes().set_yscale('log')"
-
--- | Set limits on the x axis
-xlim :: (MplotValue val1, MplotValue val) => val1 -> val -> Matplotlib
-xlim l u = mp # "plot.xlim([" # l # "," # u # "])"
-
--- | Set limits on the y axis
-ylim :: (MplotValue val1, MplotValue val) => val1 -> val -> Matplotlib
-ylim l u = mp # "plot.ylim([" # l # "," # u # "])"
 
 -- | Plot a KDE of the given functions with an optional start/end and a bandwidth h
 densityBandwidth :: [Double] -> Double -> Maybe (Double, Double) -> Matplotlib
@@ -368,9 +290,6 @@ densityBandwidth l h maybeStartEnd =
         gaussianPdf x mu sigma = exp (- sqr (x - mu) / (2 * sigma)) / sqrt (2 * pi * sigma)
         sqr x = x * x
 
--- | Add a horizontal line across the axis
-axhline y = mp # "ax.axhline(" # y ## ")"
-
 -- | Plot cross-correlation
 xcorr x y = readData (x, y) % mp # "ax.xcorr(data[0], data[1]" ## ")"
 
@@ -380,14 +299,105 @@ acorr x = readData x % mp # "ax.acorr(data" ## ")"
 -- | Plot text at a specified location
 text x y str = mp # "ax.text(" # x # "," # y # "," # "'" # str # "'" ## ")"
 
+-- * Layout, axes, and legends
+
+-- | Square up the aspect ratio of a plot.
+squareAxes :: Matplotlib
+squareAxes = mp # "ax.set_aspect('equal')"
+
+-- | Set the rotation of the labels on the x axis to the given number of degrees
+roateAxesLabels :: MplotValue val => val -> Matplotlib
+roateAxesLabels degrees = mp # "labels = ax.get_xticklabels()"
+   % mp # "for label in labels:"
+   % mp # "    label.set_rotation("#degrees#")"
+
+-- | Set the x labels to be vertical
+verticalAxes :: Matplotlib
+verticalAxes = mp # "labels = ax.get_xticklabels()"
+   % mp # "for label in labels:"
+   % mp # "    label.set_rotation('vertical')"
+
+-- | Set the x scale to be logarithmic
+logX :: Matplotlib
+logX = mp # "ax.set_xscale('log')"
+
+-- | Set the y scale to be logarithmic
+logY :: Matplotlib
+logY = mp # "ax.set_yscale('log')"
+
+-- | Set limits on the x axis
+xlim :: (MplotValue val1, MplotValue val) => val1 -> val -> Matplotlib
+xlim l u = mp # "ax.set_xlim(" # l # "," # u # ")"
+
+-- | Set limits on the y axis
+ylim :: (MplotValue val1, MplotValue val) => val1 -> val -> Matplotlib
+ylim l u = mp # "ax.set_ylim(" # l # "," # u # ")"
+
+-- | Add a horizontal line across the axis
+axhline y = mp # "ax.axhline(" # y ## ")"
+
 -- | Insert a legend
-legend = mp # "plot.legend(" ## ")"
+legend = mp # "ax.legend(" ## ")"
 
 -- | Insert a color bar
+-- TODO This refers to the plot and not an axis. Might cause trouble with subplots
 colorbar = mp # "plot.colorbar(" ## ")"
+
+-- | Set the spacing of ticks on the x axis
+axisXTickSpacing :: (MplotValue val1, MplotValue val) => val1 -> val -> Matplotlib
+axisXTickSpacing nr width = mp # "ax.set_xticks(np.arange(" # nr # ")+" # width ## ")"
+
+-- | Set the labels on the x axis
+axisXTickLabels :: MplotValue val => val -> Matplotlib
+axisXTickLabels labels = mp # "ax.set_xticklabels( (" # labels # ") " ## " )"
+
+-- | Add a title
+title :: MplotValue val => val -> Matplotlib
+title s = mp # "ax.set_title(r'" # s # "'" ## ")"
+
+-- | Show/hide grid lines
+grid :: Bool -> Matplotlib
+grid t = mp # "ax.grid(" # t # ")"
+
+-- | Enable 3D projection
+axis3DProjection :: Matplotlib
+axis3DProjection = mp # "ax = plot.gca(projection='3d')"
+
+-- | Label and set limits of a set of 3D axis
+-- TODO This is a mess, does both more and less than it claims.
+axis3DLabels xs ys zs =
+  mp # "ax.set_xlabel('X')"
+  % mp # "ax.set_xlim3d(" # minimum2 xs # ", " # maximum2 xs # ")"
+  % mp # "ax.set_ylabel('Y')"
+  % mp # "ax.set_ylim3d(" # minimum2 ys # ", " # maximum2 ys # ")"
+  % mp # "ax.set_zlabel('Z')"
+  % mp # "ax.set_zlim3d(" # minimum2 zs # ", " # maximum2 zs # ")"
+
+-- | Add a label to the x axis
+xLabel :: MplotValue val => val -> Matplotlib
+xLabel label = mp # "ax.set_xlabel(r'" # label # "'" ## ")"
+
+-- | Add a label to the y axis
+yLabel :: MplotValue val => val -> Matplotlib
+yLabel label = mp # "ax.set_ylabel(r'" # label # "'" ## ")"
+
+-- | Add a label to the z axis
+zLabel :: MplotValue val => val -> Matplotlib
+zLabel label = mp # "ax.set_zlabel(r'" # label # "'" ## ")"
+
+-- * Subplots
+
+-- | Create a subplot with the coordinates (r,c,f)
+addSubplot r c f = mp # "ax = plot.gcf().add_subplot(" # r # c # f ## ")" % updateAxes
+
+-- | Access a subplot with the coordinates (r,c,f)
+getSubplot r c f = mp # "ax = plot.subplot(" # r # "," # c # "," # f ## ")" % updateAxes
 
 -- | Creates subplots and stores them in an internal variable
 subplots = mp # "fig, axes = plot.subplots(" ## ")"
 
 -- | Access a subplot
 setSubplot s = mp # "ax = axes[" # s # "]"
+
+-- | Add axes to a figure
+axes = mp # "ax = axes(" ## ")" % updateAxes

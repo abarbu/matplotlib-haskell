@@ -214,4 +214,3 @@ mboxplot = subplots @@ [o2 "ncols" "2", o2 "sharey" "True"]
   % boxplot (take 3 $ chunksOf 10 $ map (* 2) $ normals) @@ [o2 "labels" "['X', 'Y', 'Z']"]
   % setSubplot "1"
   % boxplot (take 3 $ chunksOf 10 $ map (* 2) $ normals) @@ [o2 "labels" "['A', 'B', 'C']", o2 "showbox" "False", o2 "showcaps" "False"]
-
