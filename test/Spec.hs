@@ -1,40 +1,22 @@
-{-# language ExtendedDefaultRules #-}
+{-# language ExtendedDefaultRules, ScopedTypeVariables, QuasiQuotes #-}
 
 import Test.Tasty
 import Test.Tasty.HUnit
 import System.IO.Unsafe
 import Graphics.Matplotlib
 import System.IO.Temp
+import System.Random
+import Text.RawString.QQ
+import Data.List
+import Data.List.Split
 
-main = defaultMain tests
+-- * Random values for testing
 
-tests :: TestTree
-tests = testGroup "Tests" [unitTests]
+uniforms :: (Random a, Num a) => [a]
+uniforms = randoms (mkStdGen 42)
+uniforms' lo hi = randomRs (lo,hi) (mkStdGen 42)
 
--- | Test one plot; right now we just test that the command executed without
--- errors. We should visually compare plots somehow.
-testPlot name fn = testCase name $ tryit fn @?= Right ""
-  where tryit fn = unsafePerformIO $ withSystemTempFile "a.png" (\file _ -> figure file fn)
-
--- | This generates examples from the test cases
-testPlot' name fn = testCase name $ tryit fn name @?= Right ""
-  where tryit fn name = unsafePerformIO $ figure ("/tmp/imgs/" ++ name ++ ".png") fn
-
-unitTests = testGroup "Unit tests"
-  [ testPlot "histogram" m1
-  , testPlot "cumulative" m2
-  , testPlot "scatter" m3
-  , testPlot "contour" m4
-  , testPlot "labelled-histogram" m5
-  -- TODO This test case is broken
-  -- , testPlot "sub-bars" $ tryit m6 "m6" @?= Right ""
-  , testPlot "density-bandwidth" m7
-  , testPlot "density" m8
-  , testPlot "line-function" m9
-  , testPlot "quadratic" m10
-  , testPlot "projections" m11
-  , testPlot "line-options" m12
-  ]
+-- * Not so random values to enable some fully-reproducible tests
 
 xs = [-0.54571992,  1.48409716, -0.57545561,  2.13058156, -0.75740497,
       -1.27879086, -0.96008858, -1.65482373, -1.69086194, -1.41925464,
@@ -77,6 +59,77 @@ ys = [ 1.28231455,  1.13480471,  0.57738712,  0.10268954,  1.00162163,
       -0.55178235, -0.69915414,  1.35454045,  0.42931902, -1.33656935,
       -0.8023867 , -2.81354854,  0.39553427, -0.22235586, -1.34302011]
 
+-- * Generate normally distributed random values; taken from normaldistribution==1.1.0.3
+
+-- | Box-Muller method for generating two normally distributed
+-- independent random values from two uniformly distributed
+-- independent random values.
+boxMuller :: Floating a => a -> a -> (a,a)
+boxMuller u1 u2 = (r * cos t, r * sin t) where r = sqrt (-2 * log u1)
+                                               t = 2 * pi * u2
+
+-- | Convert a list of uniformly distributed random values into a
+-- list of normally distributed random values. The Box-Muller
+-- algorithms converts values two at a time, so if the input list
+-- has an uneven number of element the last one will be discarded.
+boxMullers :: Floating a => [a] -> [a]
+boxMullers (u1:u2:us) = n1:n2:boxMullers us where (n1,n2) = boxMuller u1 u2
+boxMullers _          = []
+
+-- | Plural variant of 'normal', producing an infinite list of
+-- random values instead of returning a new generator. This function
+-- is analogous to 'Random.randoms'.
+normals = boxMullers $ randoms (mkStdGen 42)
+
+-- | Analogous to 'normals' but uses the supplied (mean, standard
+-- deviation).
+normals' (mean, sigma) g = map (\x -> x * sigma + mean) $ normals
+
+-- * Tests
+
+main = defaultMain tests
+
+tests :: TestTree
+tests = testGroup "Tests" [unitTests]
+
+-- | Test one plot; right now we just test that the command executed without
+-- errors. We should visually compare plots somehow.
+testPlot name fn = testCase name $ tryit fn @?= Right ""
+  where tryit fn = unsafePerformIO $ withSystemTempFile "a.png" (\file _ -> figure file fn)
+
+-- | This generates examples from the test cases
+testPlot' name fn = testCase name $ tryit fn name @?= Right ""
+  where tryit fn name = unsafePerformIO $ do
+          c <- code fn
+          print c
+          figure ("/tmp/imgs/" ++ name ++ ".png") fn
+
+unitTests = testGroup "Unit tests"
+  [ testPlot "histogram" m1
+  , testPlot "cumulative" m2
+  , testPlot "scatter" m3
+  , testPlot "contour" m4
+  , testPlot "labelled-histogram" m5
+  -- TODO This test case is broken
+  -- , testPlot "sub-bars" m6
+  , testPlot "density-bandwidth" m7
+  , testPlot "density" m8
+  , testPlot "line-function" m9
+  , testPlot "quadratic" m10
+  , testPlot "projections" m11
+  , testPlot "line-options" m12
+  , testPlot "corr" mxcorr
+  , testPlot "tex" mtex
+  , testPlot "show-matrix" mmat
+  , testPlot "legend" mlegend
+  , testPlot "hist2DLog" mhist2DLog
+  , testPlot "eventplot" meventplot
+  , testPlot "errorbar" merrorbar
+  , testPlot "boxplot" mboxplot
+  ]
+
+-- * These tests are fully-reproducible, the output must be identical every time
+
 m1 :: Matplotlib
 m1 = histogram xs 8
 
@@ -113,3 +166,50 @@ m10 = plotMapLinear (\x -> x**2) (-2) 2 100 @@ [o1 "'.'"] % title "Quadratic fun
 m11 = projectionsF (\a b -> cos (degreesRadians a) + sin (degreesRadians b)) (-100) 100 (-200) 200 10
 
 m12 = plot [1,2,3,4,5,6] [1,3,2,5,2,4] @@ [o1 "'go-'", o2 "linewidth" "2"]
+
+-- * These tests can be random and may not be exactly the same every time
+
+-- | http://matplotlib.org/examples/pylab_examples/xcorr_demo.html
+mxcorr = xacorr xs ys [o2 "usevlines" "True", o2 "maxlags" "50", o2 "normed" "True", o2 "lw" "2"]
+  where (xs :: [Double]) = take 100 normals
+        (ys :: [Double]) = take 100 normals
+
+-- | http://matplotlib.org/examples/pylab_examples/tex_unicode_demo.html
+mtex = plotMapLinear cos 0 1 100
+  % setTeX True
+  % setUnicode True
+  % xLabel [r|\textbf{time (s)}|]
+  % yLabel [r|\textit{Velocity (\u00B0/sec)}|] @@ [o2 "fontsize" "16"]
+  % title [r|\TeX\ is Number $\displaystyle\sum_{n=1}^\infty\frac{-e^{i\pi}}{2^n}$!"|] @@ [o2 "fontsize" "16", o2 "color" "'r'"]
+  % grid True
+
+mmat = pcolor (take 10 $ chunksOf 8 uniforms) @@ [o2 "edgecolors" "'k'", o2 "linewidth" "1"]
+
+-- | http://matplotlib.org/examples/pylab_examples/legend_demo3.html
+mlegend = plotMapLinear (\x -> x ** 2) 0 1 100 @@ [o2 "label" "'x^2'"]
+  % plotMapLinear (\x -> x ** 3) 0 1 100 @@ [o2 "label" "'x^3'"]
+  % legend @@ [o2 "fancybox" "True", o2 "shadow" "True", o2 "title" "'Legend'", o2 "loc" "'upper left'"]
+
+-- | http://matplotlib.org/examples/pylab_examples/hist2d_log_demo.html
+mhist2DLog = histogram2D x y @@ [o2 "bins" "40", o2 "norm" "mcolors.LogNorm()"]
+  % colorbar
+  where (x:y:_) = chunksOf 10000 normals
+
+meventplot = plot xs ys
+  % mp # "ax.add_collection(mcollections.EventCollection(data[0], linelength=0.05))"
+  % mp # "ax.add_collection(mcollections.EventCollection(data[1], orientation='vertical', linelength=0.05))"
+  % text 0.1 0.6 "Ticks mark the actual data points"
+  where xs = sort $ take 10 uniforms
+        ys = map (\x -> x ** 2) xs
+
+merrorbar = errorbar xs ys errs @@ [o2 "errorevery" "2"]
+  where xs = [0.1,0.2..4]
+        ys = map (\x -> exp $ -x) xs
+        errs = map (\x -> 0.1 + 0.1 * sqrt x) xs
+
+mboxplot = subplots @@ [o2 "ncols" "2", o2 "sharey" "True"]
+  % setSubplot "0"
+  % boxplot (take 3 $ chunksOf 10 $ map (* 2) $ normals) @@ [o2 "labels" "['X', 'Y', 'Z']"]
+  % setSubplot "1"
+  % boxplot (take 3 $ chunksOf 10 $ map (* 2) $ normals) @@ [o2 "labels" "['A', 'B', 'C']", o2 "showbox" "False", o2 "showcaps" "False"]
+

@@ -120,6 +120,8 @@ instance MplotValue Integer where
   toPython s = show s
 instance MplotValue Int where
   toPython s = show s
+instance MplotValue Bool where
+  toPython s = show s
 instance (MplotValue x) => MplotValue (x, x) where
   toPython (n, v) = toPython n ++ " = " ++ toPython v
 instance (MplotValue (x, y)) => MplotValue [(x, y)] where
@@ -134,7 +136,7 @@ default (Integer, Int, Double)
 -- optFn :: Matplotlib -> Matplotlib
 optFn :: ([Option] -> String) -> Matplotlib -> Matplotlib
 optFn f l | isJust $ mpPendingOption l = error "Commands can have only open option. TODO Enforce this through the type system or relax it!"
-          | otherwise = l' { mpPendingOption = Just (\os -> Exec (sl ++ f os)) }
+          | otherwise = l' { mpPendingOption = Just (\os -> Exec (sl `combine` f os)) }
   where (l', (Exec sl)) = removeLast l
         removeLast x@(Matplotlib _ Nothing s) = (x { mpRest = sdeleteAt (S.length s - 1) s }
                                                 , fromMaybe (Exec "") (slookup (S.length s - 1) s))
@@ -144,6 +146,10 @@ optFn f l | isJust $ mpPendingOption l = error "Commands can have only open opti
                     | otherwise      = Nothing
         sdeleteAt i s | i < S.length s = S.take i s >< S.drop (i + 1) s
                       | otherwise      = s
+        combine [] r = r
+        combine l [] = l
+        combine l r | [last l] == "(" && [head r] == "," = l ++ tail r
+                    | otherwise = l ++ r
 
 -- | Merge two commands with options between
 options :: Matplotlib -> Matplotlib
@@ -218,6 +224,8 @@ pyIncludes = ["import matplotlib"
              ,"import matplotlib.patches as mpatches"
              ,"import matplotlib.pyplot as plot"
              ,"import matplotlib.mlab as mlab"
+             ,"import matplotlib.colors as mcolors"
+             ,"import matplotlib.collections as mcollections"
              ,"from matplotlib import cm"
              ,"from mpl_toolkits.mplot3d import axes3d"
              ,"import numpy as np"
@@ -225,7 +233,9 @@ pyIncludes = ["import matplotlib"
              ,"import sys"
              ,"import json"
              ,"import random, datetime"
-             ,"from matplotlib.dates import DateFormatter, WeekdayLocator"]
+             ,"from matplotlib.dates import DateFormatter, WeekdayLocator"
+             ,"ax = plot.figure().gca()"
+             ,"axes = [plot.figure().gca()]"]
 
 -- | The python command that reads external data into the python data array
 pyReadData :: [Char] -> [[Char]]

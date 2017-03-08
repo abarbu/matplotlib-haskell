@@ -65,97 +65,54 @@ onscreen :: Matplotlib -> IO (Either String String)
 onscreen m = withMplot m (\str -> python $ pyIncludes ++ str ++ pyDetach ++ pyOnscreen)
 
 -- | Print the python code that would be executed
-code :: Matplotlib -> IO (Either a String)
-code m = withMplot m (\str -> return $ Right $ unlines $ pyIncludes ++ str ++ pyDetach ++ pyOnscreen)
+code :: Matplotlib -> IO String
+code m = withMplot m (\str -> return $ unlines $ pyIncludes ++ str ++ pyDetach ++ pyOnscreen)
 
 -- | Save to a file
 figure :: [Char] -> Matplotlib -> IO (Either String String)
 figure filename m = withMplot m (\str -> python $ pyIncludes ++ str ++ pyFigure filename)
 
--- * Plotting commands
+-- * Useful plots
 
--- | Plot the 'a' and 'b' entries of the data object
-dataPlot :: (MplotValue val, MplotValue val1) => val1 -> val -> Matplotlib
-dataPlot a b = mp # "p = plot.plot(data[" # a # "], data[" # b # "]" ## ")"
-
--- | Plot the Haskell objects 'x' and 'y' as a line
-plot :: (ToJSON t, ToJSON t1) => t1 -> t -> Matplotlib
-plot x y = readData (x, y) % dataPlot 0 1
-
--- | Show grid lines
-gridLines :: Matplotlib
-gridLines = mp # "ax.grid(True)"
-
--- | Plot x against y where x is a date.
---   xunit is something like 'weeks', yearStart, monthStart, dayStart are an offset to x.
--- TODO This isn't general enough; it's missing some settings about the format. The call is also a mess.
-dateLine :: (ToJSON t1, ToJSON t2) => t1 -> t2 -> String -> (Int, Int, Int) -> Matplotlib
-dateLine x y xunit (yearStart, monthStart, dayStart) =
-    readData (x, y)
-  % mp # "data[0] = [datetime.timedelta("#xunit#"=i) + datetime.datetime("#yearStart#","#monthStart#","#dayStart#") for i in data[0]]"
-  % dataPlot 0 1 `def` [o1 "-"]
-  % mp # "ax.xaxis.set_major_formatter(DateFormatter('%B'))"
-  % mp # "ax.xaxis.set_minor_locator(WeekdayLocator(byweekday=6))"
-  
--- | Add a label to the x axis
-xLabel :: MplotValue val => val -> Matplotlib
-xLabel label = mp # "plot.xlabel('" # label # "')"
-
--- | Add a label to the y axis
-yLabel :: MplotValue val => val -> Matplotlib
-yLabel label = mp # "plot.ylabel('" # label # "')"
-
--- | Add a label to the z axis
-zLabel :: MplotValue val => val -> Matplotlib
-zLabel label = mp # "plot.zlabel('" # label # "')"
-
--- | Create a histogram for the 'a' entry of the data array
-dataHistogram :: (MplotValue val1, MplotValue val) => val1 -> val -> Matplotlib
-dataHistogram a bins = mp # "plot.hist(data[" # a # "]," # bins ## ")"
+-- | Plot the cross-correlation and autocorrelation of several variables. TODO Due to
+-- a limitation in the options mechanism this takes explicit options.
+xacorr xs ys opts = readData (xs, ys)
+  % addSubplot 2 1 1
+  % xcorr xs ys @@ opts
+  % grid True
+  % axhline 0 @@ [o1 "0", o2 "color" "'black'", o2 "lw" "2"]
+  % addSubplot 2 1 2 @@ [o2 "sharex" "ax"]
+  % acorr xs @@ opts
+  % grid True
+  % axhline 0 @@ [o2 "color" "'black'", o2 "lw" "2"]
 
 -- | Plot a histogram for the given values with 'bins'
 histogram :: (MplotValue val, ToJSON t) => t -> val -> Matplotlib
 histogram values bins = readData [values] % dataHistogram 0 bins
 
--- | Plot & show the histogram
-showHistogram :: (ToJSON t, MplotValue val) => t -> val -> IO (Either String String)
-showHistogram values bins = onscreen $ histogram values bins
-
--- | Create a scatter plot accessing the given fields of the data array
-dataScatter :: (MplotValue val1, MplotValue val) => val1 -> val -> Matplotlib
-dataScatter a b = dataPlot a b `def` [o1 "'.'"]
+-- | Plot a 2D histogram for the given values with 'bins'
+histogram2D x y = readData [x,y] %
+  mp # "plot.hist2d(data[0], data[1]" ## ")"
 
 -- | Plot the given values as a scatter plot
 scatter :: (ToJSON t1, ToJSON t) => t1 -> t -> Matplotlib
 scatter x y = plot x y `def` [o1 "'.'"]
 
--- | Create a line accessing the given entires of the data array
-dataLine :: (MplotValue val1, MplotValue val) => val1 -> val -> Matplotlib
-dataLine a b = dataPlot a b `def` [o1 "'-'"]
-
 -- | Plot a line
 line :: (ToJSON t1, ToJSON t) => t1 -> t -> Matplotlib
 line x y = plot x y `def` [o1 "'-'"]
+
+-- | Like 'plot' but takes an error bar value per point
+errorbar xs ys errs = readData (xs, ys, errs)
+  % mp # "ax.errorbar(data[0], data[1], yerr=data[2]" ## ")"
 
 -- | Plot a line given a function that will be executed for each element of
 -- given list. The list provides the x values, the function the y values.
 lineF :: (ToJSON a, ToJSON b) => (a -> b) -> [a] -> Matplotlib
 lineF f l = plot l (map f l) `def` [o1 "'-'"]
 
--- | Create a 3D contour
-contour xs ys zs =
-  readData (xs, ys, zs)
-  % axis3DProjection
-  % surface 0 1 2
-  % contourRaw 0 1 2 (maximum2 xs) (maximum2 ys) (minimum2 zs)
-  % axis3DLabels xs ys zs
-
--- | Create a 3D projection
-projections xs ys zs =
-  readData (xs, ys, zs)
-  % axis3DProjection
-  % contourRaw 0 1 2 (maximum2 xs) (maximum2 ys) (minimum2 zs)
-  % axis3DLabels xs ys zs
+boxplot l = readData l
+  % mp # "ax.boxplot(data" ## ")"
 
 -- | Given a grid of x and y values and a number of steps call the given
 -- function and plot the 3D contour
@@ -173,9 +130,117 @@ projectionsF f xStart xEnd yStart yEnd steps = projections xs ys zs
         ys = mapLinear (\_ -> (mapLinear (\y -> y) yStart yEnd steps)) xStart xEnd steps
         zs = mapLinear (\x -> (mapLinear (\y -> f x y) yStart yEnd steps)) xStart xEnd steps
 
+-- | Plot x against y interpolating with n steps
+plotInterpolated :: (MplotValue val, ToJSON t, ToJSON t1) => t1 -> t -> val -> Matplotlib
+plotInterpolated x y n =
+  readData (x, y)
+  % interpolate 0 1 n
+  % dataPlot 0 1 `def` [o1 "-"]
+
+-- | A handy function to plot a line between two points give a function and a number o steps
+plotMapLinear :: ToJSON b => (Double -> b) -> Double -> Double -> Double -> Matplotlib
+plotMapLinear f s e n = line xs ys
+  where xs = mapLinear (\x -> x) s e n
+        ys = mapLinear (\x -> f x) s e n
+
+-- | Plot a line between 0 and the length of the array with the given y values
+line1 :: (Foldable t, ToJSON (t a)) => t a -> Matplotlib
+line1 y = line [0..length y] y
+
+-- | Plot a matrix
+matShow :: ToJSON a => a -> Matplotlib
+matShow d = readData d
+            % (mp # "plot.matshow(data" ## ")")
+
+-- | Plot a matrix
+pcolor :: ToJSON a => a -> Matplotlib
+pcolor d = readData d
+            % (mp # "plot.pcolor(np.array(data)" ## ")")
+
+-- | Plot a KDE of the given functions; a good bandwith will be chosen automatically
+density :: [Double] -> Maybe (Double, Double) -> Matplotlib
+density l maybeStartEnd =
+  densityBandwidth l (((4 * (variance ** 5)) / (fromIntegral $ 3 * length l)) ** (1 / 5) / 3) maybeStartEnd
+  where mean = foldl' (+) 0 l / (fromIntegral $ length l)
+        variance = foldl' (+) 0 (map (\x -> sqr (x - mean)) l) / (fromIntegral $ length l)
+        sqr x = x * x
+
+-- * Matplotlib configuration
+
+setTeX :: Bool -> Matplotlib
+setTeX b = mp # "matplotlib.rcParams['text.usetex'] = " # b
+
+setUnicode :: Bool -> Matplotlib
+setUnicode b = mp # "matplotlib.rcParams['text.latex.unicode'] = " # b
+
+
+-- * Basic plotting commands
+
+-- | Plot the 'a' and 'b' entries of the data object
+dataPlot :: (MplotValue val, MplotValue val1) => val1 -> val -> Matplotlib
+dataPlot a b = mp # "p = plot.plot(data[" # a # "], data[" # b # "]" ## ")"
+
+-- | Plot the Haskell objects 'x' and 'y' as a line
+plot :: (ToJSON t, ToJSON t1) => t1 -> t -> Matplotlib
+plot x y = readData (x, y) % dataPlot 0 1
+
+-- | Show/hide grid lines
+grid :: Bool -> Matplotlib
+grid t = mp # "plot.gca().grid(" # t # ")"
+
+-- | Plot x against y where x is a date.
+--   xunit is something like 'weeks', yearStart, monthStart, dayStart are an offset to x.
+-- TODO This isn't general enough; it's missing some settings about the format. The call is also a mess.
+dateLine :: (ToJSON t1, ToJSON t2) => t1 -> t2 -> String -> (Int, Int, Int) -> Matplotlib
+dateLine x y xunit (yearStart, monthStart, dayStart) =
+    readData (x, y)
+  % mp # "data[0] = [datetime.timedelta("#xunit#"=i) + datetime.datetime("#yearStart#","#monthStart#","#dayStart#") for i in data[0]]"
+  % dataPlot 0 1 `def` [o1 "-"]
+  % mp # "ax.xaxis.set_major_formatter(DateFormatter('%B'))"
+  % mp # "ax.xaxis.set_minor_locator(WeekdayLocator(byweekday=6))"
+  
+-- | Add a label to the x axis
+xLabel :: MplotValue val => val -> Matplotlib
+xLabel label = mp # "plot.xlabel(r'" # label # "'" ## ")"
+
+-- | Add a label to the y axis
+yLabel :: MplotValue val => val -> Matplotlib
+yLabel label = mp # "plot.ylabel(r'" # label # "'" ## ")"
+
+-- | Add a label to the z axis
+zLabel :: MplotValue val => val -> Matplotlib
+zLabel label = mp # "plot.zlabel(r'" # label # "'" ## ")"
+
+-- | Create a histogram for the 'a' entry of the data array
+dataHistogram :: (MplotValue val1, MplotValue val) => val1 -> val -> Matplotlib
+dataHistogram a bins = mp # "plot.hist(data[" # a # "]," # bins ## ")"
+
+-- | Create a scatter plot accessing the given fields of the data array
+dataScatter :: (MplotValue val1, MplotValue val) => val1 -> val -> Matplotlib
+dataScatter a b = dataPlot a b `def` [o1 "'.'"]
+
+-- | Create a line accessing the given entires of the data array
+dataLine :: (MplotValue val1, MplotValue val) => val1 -> val -> Matplotlib
+dataLine a b = dataPlot a b `def` [o1 "'-'"]
+
+-- | Create a 3D contour
+contour xs ys zs =
+  readData (xs, ys, zs)
+  % axis3DProjection
+  % surface 0 1 2
+  % contourRaw 0 1 2 (maximum2 xs) (maximum2 ys) (minimum2 zs)
+  % axis3DLabels xs ys zs
+
+-- | Create a 3D projection
+projections xs ys zs =
+  readData (xs, ys, zs)
+  % axis3DProjection
+  % contourRaw 0 1 2 (maximum2 xs) (maximum2 ys) (minimum2 zs)
+  % axis3DLabels xs ys zs
+
 -- | Enable 3D projection
 axis3DProjection :: Matplotlib
-axis3DProjection = mp # "ax = plot.figure().gca(projection='3d')"
+axis3DProjection = mp # "ax = plot.gca(projection='3d')"
 
 -- | Plot a 3D wireframe accessing the given elements of the data array
 wireframe :: (MplotValue val2, MplotValue val1, MplotValue val) => val2 -> val1 -> val -> Matplotlib
@@ -217,10 +282,10 @@ subplotDataBar a width offset opts =
   mp # "ax.bar(np.arange(len(data[" # a # "]))+" # offset # ", data[" # a # "], " # width ## ")" @@ opts
 
 -- | Create a subplot with the coordinates (r,c,f)
-addSubplot r c f = mp # "ax = plot.figure().add_subplot(" # r # c # f ## ")"
+addSubplot r c f = mp # "ax = plot.gcf().add_subplot(" # r # c # f ## ")"
 
 -- | Access a subplot with the coordinates (r,c,f)
-mplotSubplot r c f = mp # "ax = plot.subplot(" # r # "," # c # "," # f ## ")"
+getSubplot r c f = mp # "ax = plot.subplot(" # r # "," # c # "," # f ## ")"
 
 -- | The default bar with
 barDefaultWidth nr = 1.0 / (fromIntegral nr + 1)
@@ -241,7 +306,7 @@ subplotBars valuesList optsList =
 
 -- | Add a title
 title :: MplotValue val => val -> Matplotlib
-title s = mp # "plot.title('" # s ## "')"
+title s = mp # "plot.title(r'" # s # "'" ## ")"
 
 -- | Set the spacing of ticks on the x axis
 axisXTickSpacing :: (MplotValue val1, MplotValue val) => val1 -> val -> Matplotlib
@@ -256,13 +321,6 @@ interpolate :: (MplotValue val, MplotValue val2, MplotValue val1) => val2 -> val
 interpolate a b n =
   (mp # "data[" # b # "] = mlab.stineman_interp(np.linspace(data[" # a # "][0],data[" # a # "][-1]," # n # "),data[" # a # "],data[" # b # "],None)")
   % (mp # "data[" # a # "] = np.linspace(data[" # a # "][0],data[" # a # "][-1]," # n # ")")
-
--- | Plot x against y interpolating with n steps
-plotInterpolated :: (MplotValue val, ToJSON t, ToJSON t1) => t1 -> t -> val -> Matplotlib
-plotInterpolated x y n =
-  readData (x, y)
-  % interpolate 0 1 n
-  % dataPlot 0 1 `def` [o1 "-"]
 
 -- | Square up the aspect ratio of a plot.
 squareAxes :: Matplotlib
@@ -296,21 +354,6 @@ xlim l u = mp # "plot.xlim([" # l # "," # u # "])"
 ylim :: (MplotValue val1, MplotValue val) => val1 -> val -> Matplotlib
 ylim l u = mp # "plot.ylim([" # l # "," # u # "])"
 
--- | A handy function to plot a line between two points give a function and a number o steps
-plotMapLinear :: ToJSON b => (Double -> b) -> Double -> Double -> Double -> Matplotlib
-plotMapLinear f s e n = line xs ys
-  where xs = mapLinear (\x -> x) s e n
-        ys = mapLinear (\x -> f x) s e n
-
--- | Plot a line between 0 and the length of the array with the given y values
-line1 :: (Foldable t, ToJSON (t a)) => t a -> Matplotlib
-line1 y = line [0..length y] y
-
--- | Plot a matrix
-matShow :: ToJSON a => a -> Matplotlib
-matShow d = readData d
-            % (mp # "plot.matshow(data" ## ")")
-
 -- | Plot a KDE of the given functions with an optional start/end and a bandwidth h
 densityBandwidth :: [Double] -> Double -> Maybe (Double, Double) -> Matplotlib
 densityBandwidth l h maybeStartEnd =
@@ -325,10 +368,26 @@ densityBandwidth l h maybeStartEnd =
         gaussianPdf x mu sigma = exp (- sqr (x - mu) / (2 * sigma)) / sqrt (2 * pi * sigma)
         sqr x = x * x
 
--- | Plot a KDE of the given functions; a good bandwith will be chosen automatically
-density :: [Double] -> Maybe (Double, Double) -> Matplotlib
-density l maybeStartEnd =
-  densityBandwidth l (((4 * (variance ** 5)) / (fromIntegral $ 3 * length l)) ** (1 / 5) / 3) maybeStartEnd
-  where mean = foldl' (+) 0 l / (fromIntegral $ length l)
-        variance = foldl' (+) 0 (map (\x -> sqr (x - mean)) l) / (fromIntegral $ length l)
-        sqr x = x * x
+-- | Add a horizontal line across the axis
+axhline y = mp # "ax.axhline(" # y ## ")"
+
+-- | Plot cross-correlation
+xcorr x y = readData (x, y) % mp # "ax.xcorr(data[0], data[1]" ## ")"
+
+-- | Plot auto-correlation
+acorr x = readData x % mp # "ax.acorr(data" ## ")"
+
+-- | Plot text at a specified location
+text x y str = mp # "ax.text(" # x # "," # y # "," # "'" # str # "'" ## ")"
+
+-- | Insert a legend
+legend = mp # "plot.legend(" ## ")"
+
+-- | Insert a color bar
+colorbar = mp # "plot.colorbar(" ## ")"
+
+-- | Creates subplots and stores them in an internal variable
+subplots = mp # "fig, axes = plot.subplots(" ## ")"
+
+-- | Access a subplot
+setSubplot s = mp # "ax = axes[" # s # "]"
