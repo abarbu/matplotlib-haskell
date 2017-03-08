@@ -1,5 +1,5 @@
 name:                matplotlib
-version:             0.2.1
+version:             0.3.0
 synopsis:            Bindings to Matplotlib; a Python plotting library
 description:
     Matplotlib is probably the most full featured plotting library out there.
