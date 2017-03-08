@@ -1,7 +1,14 @@
 name:                matplotlib
-version:             0.2.0
+version:             0.2.1
 synopsis:            Bindings to Matplotlib; a Python plotting library
-description:         Matplotlib is probably the most full featured plotting library out there. These bindings provide a quick, easy, and extensible way to use it in Haskell. Type-safety is largely non-existent and sacrificed for maximum extensibility.
+description:
+    Matplotlib is probably the most full featured plotting library out there.
+    These bindings provide a quick, easy, and extensible way to use it in
+    Haskell.
+    .
+    <<https://github.com/abarbu/matplotlib-haskell/raw/master/imgs/contour.png>>
+    .
+    > onscreen $ contourF (\a b -> sin (degreesRadians a) + cos (degreesRadians b)) (-100) 100 (-200) 200 10
 homepage:            https://github.com/abarbu/matplotlib-haskell
 license:             BSD3
 license-file:        LICENSE

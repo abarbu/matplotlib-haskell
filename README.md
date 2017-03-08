@@ -1,6 +1,7 @@
 # Matplotlib
 
-[![Build Status](http://circleci-badges-max.herokuapp.com/img/abarbu/matplotlib-haskell/master?token=468e8942459ca5f34089fb5c29a478ffb6d531af)](https://circleci.com/gh/abarbu/matplotlib-haskell/tree/master)
+[![Build Status](https://img.shields.io/circleci/project/github/abarbu/matplotlib-haskell.svg)](circleci.com/gh/abarbu/matplotlib-haskell)
+[![Hackage](https://img.shields.io/hackage/v/Matplotlib.svg)](https://hackage.haskell.org/package/Matplotlib)
 
 Haskell bindings to Python's Matplotlib. It's high time that Haskell had a
 fully-fledged plotting library!
@@ -28,4 +29,11 @@ on Ubuntu machines with the following command:
 sudo apt-get install -y python3-matplotlib python3-numpy python-mpltoolkits.basemap
 ```
 
-If you have instructions for other machines or OSes let me know.
+If you have instructions for other machines or OSes let me know. We require
+`/usr/bin/python3` to be available; the path isn't configurable right now.
+
+Once you have the prerequisites you can install using the standard incantation
+
+```bash
+cabal install matplotlib
+```
