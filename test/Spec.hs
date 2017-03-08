@@ -1,3 +1,5 @@
+{-# language ExtendedDefaultRules #-}
+
 import Test.Tasty
 import Test.Tasty.HUnit
 import System.IO.Unsafe
@@ -31,9 +33,10 @@ unitTests = testGroup "Unit tests"
   , testPlot "line-function" m9
   , testPlot "quadratic" m10
   , testPlot "projections" m11
+  , testPlot "line-options" m12
   ]
 
-xs = [-0.54571992 :: Double,  1.48409716, -0.57545561,  2.13058156, -0.75740497,
+xs = [-0.54571992,  1.48409716, -0.57545561,  2.13058156, -0.75740497,
       -1.27879086, -0.96008858, -1.65482373, -1.69086194, -1.41925464,
        0.68144401,  1.44847131,  1.12124327,  1.32056244, -0.4555279 ,
        1.96002923, -1.34810771,  0.01513306,  1.25298883, -1.07541677,
@@ -53,7 +56,7 @@ xs = [-0.54571992 :: Double,  1.48409716, -0.57545561,  2.13058156, -0.75740497,
       -1.50321042,  0.03949817,  0.35286613,  1.86994544,  1.16249707,
        0.57421291,  1.21151469,  1.74863421,  0.42287859, -1.22785845,
       -0.61650528,  1.76743253, -0.45818694, -1.16560907,  0.0677502 ]
-ys = [ 1.28231455 :: Double,  1.13480471,  0.57738712,  0.10268954,  1.00162163,
+ys = [ 1.28231455,  1.13480471,  0.57738712,  0.10268954,  1.00162163,
       -0.85453571, -1.61049343,  1.33194242,  0.12054943, -0.56568776,
        2.11550009,  0.03663454,  0.24889313,  0.85458325,  0.77326592,
        0.58815223, -0.79997005,  0.54979418,  0.47711544,  0.73004143,
@@ -75,35 +78,38 @@ ys = [ 1.28231455 :: Double,  1.13480471,  0.57738712,  0.10268954,  1.00162163,
       -0.8023867 , -2.81354854,  0.39553427, -0.22235586, -1.34302011]
 
 m1 :: Matplotlib
-m1 = histogram xs (8 :: Int) []
+m1 = histogram xs 8
 
 m2 :: Matplotlib
-m2 = histogram xs (8 :: Int) [K "cumulative" "True"]
+m2 = histogram xs 8 @@ [o2 "cumulative" "True"]
 
-m3 = scatter xs ys []
+m3 = scatter xs ys
 
 degreesRadians a = a * pi / 180.0
 radiansDegrees a = a * 180.0 / pi
 
 m4 = contourF (\a b -> sin (degreesRadians a) + cos (degreesRadians b)) (-100) 100 (-200) 200 10
 
-m5 = histogram xs (7 :: Int) []
+m5 = histogram xs 7
    % yLabel "number of queries"
    % xLabel "true positives"
 
 m6 = subplotBarsLabelled
-       [[(40 :: Double), 50, 20, 50], [10, 20, 30, 40], [40, 50, 20, 50]]
+       [[40, 50, 20, 50], [10, 20, 30, 40], [40, 50, 20, 50]]
        ["a", "b", "c", "d"] []
-      % title "Wee a title" []
+      % title "Wee a title"
       % xLabel "X"
       % yLabel "Y"
 
-m7 = densityBandwidth [2.1, 1.3, 0.4, 1.9, 5.1, 6.2] 1.5 (Just (-6, 11)) % ylim (0::Double) (0.2::Double)
+m7 = densityBandwidth [2.1, 1.3, 0.4, 1.9, 5.1, 6.2] 1.5 (Just (-6, 11))
+  % ylim 0 0.2
 
 m8 = density [2.1, 1.3, 0.4, 1.9, 5.1, 6.2] (Just (-6, 11))
 
-m9 = lineF (\x -> x**2) ([0,0.01..1] :: [Double]) []
+m9 = lineF (\x -> x**2) [0,0.01..1]
 
-m10 = plotMapLinear (\x -> x**2) (-2) 2 100 [B "'.'"] % title "Quadratic function" []
+m10 = plotMapLinear (\x -> x**2) (-2) 2 100 @@ [o1 "'.'"] % title "Quadratic function"
 
 m11 = projectionsF (\a b -> cos (degreesRadians a) + sin (degreesRadians b)) (-100) 100 (-200) 200 10
+
+m12 = plot [1,2,3,4,5,6] [1,3,2,5,2,4] @@ [o1 "'go-'", o2 "linewidth" "2"]

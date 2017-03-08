@@ -1,5 +1,5 @@
 name:                matplotlib
-version:             0.1.2.0
+version:             0.2.0
 synopsis:            Bindings to Matplotlib; a Python plotting library
 description:         Matplotlib is probably the most full featured plotting library out there. These bindings provide a quick, easy, and extensible way to use it in Haskell. Type-safety is largely non-existent and sacrificed for maximum extensibility.
 homepage:            https://github.com/abarbu/matplotlib-haskell
@@ -15,12 +15,14 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Graphics.Matplotlib
+  exposed-modules:     Graphics.Matplotlib.Internal
+                     , Graphics.Matplotlib
   build-depends:       base >= 4.7 && < 5
                      , process
                      , bytestring
                      , aeson
                      , temporary
+                     , containers
   default-language:    Haskell2010
 
 test-suite matplotlib-test

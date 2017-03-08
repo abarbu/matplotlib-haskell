@@ -7,17 +7,17 @@ fully-fledged plotting library!
 
 ![matplotlib contour plot](https://github.com/abarbu/matplotlib-haskell/raw/master/imgs/contour.png)
 
-More info and docs forthcoming. For now see the tests for some examples.
-
-Note that the API will undergo one large change in the next few days to make
-optional arguments more pervasive and less of a hassle and to eliminate some
-necessary type annotations. After this it will stabilize.
+[Documentation is available on Hackage](https://hackage.haskell.org/package/matplotlib). For
+more examples see the tests.
 
 ```haskell
+{-# LANGUAGE ExtendedDefaultRules #-}
 import Matplotlib
 
 onscreen $ contourF (\a b -> sin (degreesRadians a) + cos (degreesRadians b)) (-100) 100 (-200) 200 10
 ```
+
+We need `-XExtendedDefaultRules` to avoid having to manually having to specify certain types.
 
 ### Installation
 
