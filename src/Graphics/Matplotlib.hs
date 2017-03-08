@@ -106,7 +106,7 @@ histogram2D x y = readData [x,y] %
 -- | Plot the given values as a scatter plot
 scatter :: (ToJSON t1, ToJSON t) => t1 -> t -> Matplotlib
 scatter x y = readData (x, y)
-  % mp # "axes[0].scatter(data[0], data[1]" ## ")"
+  % mp # "ax.scatter(data[0], data[1]" ## ")"
 
 -- | Plot a line
 line :: (ToJSON t1, ToJSON t) => t1 -> t -> Matplotlib
