@@ -104,16 +104,48 @@ m # v | S.null $ mpRest m =
           (Just f) -> m { mpPendingOption = Just (\o -> Exec $ es (f o) ++ toPython v)}
       | otherwise = m { mpRest = S.adjust (\(Exec s) -> Exec $ s ++ toPython v) (S.length (mpRest m) - 1) (mpRest m) }
 
+-- | A string to be rendered in python as a string. In other words it is
+-- rendered as 'str'.
+data S = S String
+  deriving (Show, Eq, Ord)
+
+-- | A string to be rendered in python as a raw string. In other words it is
+-- rendered as r'str'.
+data R = R String
+  deriving (Show, Eq, Ord)
+
+-- | A string to be rendered in python as a raw literal/code. In other words it is
+-- inserted directly as is into the code.
+data L = L String
+  deriving (Show, Eq, Ord)
+
 -- | Values which can be combined together to form a matplotlib command. These
 -- specify how values are rendered in Python code.
 class MplotValue val where
+  -- | Render a value inline in Python code
   toPython :: val -> String
+  -- | Render a value as an optional parameter in Python code
+  toPythonOpt :: val -> String
+  toPythonOpt = toPython
 
+instance MplotValue S where
+  toPython (S s) = "'" ++ s ++ "'"
+instance MplotValue R where
+  toPython (R s) = "r'" ++ s ++ "'"
+instance MplotValue L where
+  toPython (L s) = s
 instance MplotValue String where
+  -- | A string is just a literal when used in code
   toPython s = s
+  -- | A string is a real quoted python string when used as an option
+  toPythonOpt s = toPythonOpt $ S s
 instance MplotValue [String] where
   toPython [] = ""
   toPython (x:xs) = toPython x ++ "," ++ toPython xs
+  -- | A list of strings is a list of python strings, not literals
+  toPythonOpt s = "[" ++ f s ++ "]"
+    where f [] = ""
+          f (x:xs) = toPythonOpt (str x) ++ "," ++ f xs
 instance MplotValue Double where
   toPython s = show s
 instance MplotValue Integer where
@@ -165,8 +197,8 @@ m ## v = options m # v
 renderOptions :: [Option] -> [Char]
 renderOptions [] = ""
 renderOptions xs = f xs
-  where  f (P a:l) = "," ++ toPython a ++ f l
-         f (K a b:l) = "," ++ toPython a ++  "=" ++ toPython b ++ f l
+  where  f (P a:l) = "," ++ a ++ f l
+         f (K a b:l) = "," ++ a ++  "=" ++ b ++ f l
          f [] = ""
 
 -- | An internal helper that modifies the options of a plot.
@@ -257,10 +289,19 @@ pyFigure :: [Char] -> [[Char]]
 pyFigure output = ["plot.savefig('" ++ output ++ "')"]
 
 -- | Create a positional option
-o1 x = P x
+o1 x = P $ toPythonOpt x
 
 -- | Create a keyword option
-o2 x y = K x y
+o2 x = K x . toPythonOpt
+
+-- | Create a string that will be rendered as a python string
+str = S
+
+-- | Create a string that will be rendered as a raw python string
+raw = R
+
+-- | Create a literal that will inserted into the python code directly
+lit = L
 
 -- | Update axes
 updateAxes = mp # "axes = plot.gcf().get_axes()"

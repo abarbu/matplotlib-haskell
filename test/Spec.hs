@@ -136,7 +136,7 @@ m1 :: Matplotlib
 m1 = histogram xs 8
 
 m2 :: Matplotlib
-m2 = histogram xs 8 @@ [o2 "cumulative" "True"]
+m2 = histogram xs 8 @@ [o2 "cumulative" True]
 
 m3 = scatter xs ys
 
@@ -163,16 +163,16 @@ m8 = density [2.1, 1.3, 0.4, 1.9, 5.1, 6.2] (Just (-6, 11))
 
 m9 = lineF (\x -> x**2) [0,0.01..1]
 
-m10 = plotMapLinear (\x -> x**2) (-2) 2 100 @@ [o1 "'.'"] % title "Quadratic function"
+m10 = plotMapLinear (\x -> x**2) (-2) 2 100 @@ [o1 "."] % title "Quadratic function"
 
 m11 = projectionsF (\a b -> cos (degreesRadians a) + sin (degreesRadians b)) (-100) 100 (-200) 200 10
 
-m12 = plot [1,2,3,4,5,6] [1,3,2,5,2,4] @@ [o1 "'go-'", o2 "linewidth" "2"]
+m12 = plot [1,2,3,4,5,6] [1,3,2,5,2,4] @@ [o1 "go-", o2 "linewidth" 2]
 
 -- * These tests can be random and may not be exactly the same every time
 
 -- | http://matplotlib.org/examples/pylab_examples/xcorr_demo.html
-mxcorr = xacorr xs ys [o2 "usevlines" "True", o2 "maxlags" "50", o2 "normed" "True", o2 "lw" "2"]
+mxcorr = xacorr xs ys [o2 "usevlines" True, o2 "maxlags" 50, o2 "normed" True, o2 "lw" 2]
   where (xs :: [Double]) = take 100 normals
         (ys :: [Double]) = take 100 normals
 
@@ -181,19 +181,19 @@ mtex = plotMapLinear cos 0 1 100
   % setTeX True
   % setUnicode True
   % xLabel [r|\textbf{time (s)}|]
-  % yLabel [r|\textit{Velocity (\u00B0/sec)}|] @@ [o2 "fontsize" "16"]
-  % title [r|\TeX\ is Number $\displaystyle\sum_{n=1}^\infty\frac{-e^{i\pi}}{2^n}$!"|] @@ [o2 "fontsize" "16", o2 "color" "'r'"]
+  % yLabel [r|\textit{Velocity (\u00B0/sec)}|] @@ [o2 "fontsize" 16]
+  % title [r|\TeX\ is Number $\displaystyle\sum_{n=1}^\infty\frac{-e^{i\pi}}{2^n}$!"|] @@ [o2 "fontsize" 16, o2 "color" "r"]
   % grid True
 
-mmat = pcolor (take 10 $ chunksOf 8 uniforms) @@ [o2 "edgecolors" "'k'", o2 "linewidth" "1"]
+mmat = pcolor (take 10 $ chunksOf 8 uniforms) @@ [o2 "edgecolors" "k", o2 "linewidth" 1]
 
 -- | http://matplotlib.org/examples/pylab_examples/legend_demo3.html
-mlegend = plotMapLinear (\x -> x ** 2) 0 1 100 @@ [o2 "label" "'x^2'"]
-  % plotMapLinear (\x -> x ** 3) 0 1 100 @@ [o2 "label" "'x^3'"]
-  % legend @@ [o2 "fancybox" "True", o2 "shadow" "True", o2 "title" "'Legend'", o2 "loc" "'upper left'"]
+mlegend = plotMapLinear (\x -> x ** 2) 0 1 100 @@ [o2 "label" "x^2"]
+  % plotMapLinear (\x -> x ** 3) 0 1 100 @@ [o2 "label" "x^3"]
+  % legend @@ [o2 "fancybox" True, o2 "shadow" True, o2 "title" "Legend", o2 "loc" "upper left"]
 
 -- | http://matplotlib.org/examples/pylab_examples/hist2d_log_demo.html
-mhist2DLog = histogram2D x y @@ [o2 "bins" "40", o2 "norm" "mcolors.LogNorm()"]
+mhist2DLog = histogram2D x y @@ [o2 "bins" 40, o2 "norm" $ lit "mcolors.LogNorm()"]
   % colorbar
   where (x:y:_) = chunksOf 10000 normals
 
@@ -204,13 +204,13 @@ meventplot = plot xs ys
   where xs = sort $ take 10 uniforms
         ys = map (\x -> x ** 2) xs
 
-merrorbar = errorbar xs ys errs @@ [o2 "errorevery" "2"]
+merrorbar = errorbar xs ys errs @@ [o2 "errorevery" 2]
   where xs = [0.1,0.2..4]
         ys = map (\x -> exp $ -x) xs
         errs = map (\x -> 0.1 + 0.1 * sqrt x) xs
 
-mboxplot = subplots @@ [o2 "ncols" "2", o2 "sharey" "True"]
+mboxplot = subplots @@ [o2 "ncols" 2, o2 "sharey" True]
   % setSubplot "0"
-  % boxplot (take 3 $ chunksOf 10 $ map (* 2) $ normals) @@ [o2 "labels" "['X', 'Y', 'Z']"]
+  % boxplot (take 3 $ chunksOf 10 $ map (* 2) $ normals) @@ [o2 "labels" ["X", "Y", "Z"]]
   % setSubplot "1"
-  % boxplot (take 3 $ chunksOf 10 $ map (* 2) $ normals) @@ [o2 "labels" "['A', 'B', 'C']", o2 "showbox" "False", o2 "showcaps" "False"]
+  % boxplot (take 3 $ chunksOf 10 $ map (* 2) $ normals) @@ [o2 "labels" ["A", "B", "C"], o2 "showbox" False, o2 "showcaps" False]

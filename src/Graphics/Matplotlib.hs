@@ -24,8 +24,8 @@
 --
 -- @
 --   readData (x, y)
---   % mp # "p = plot.plot(data[" # a # "], data[" # b # "]" ## ")"
---   % mp # "plot.xlabel('" # label # "')"
+--   % mp \# "p = plot.plot(data[" \# a \# "], data[" \# b \# "]" ## ")"
+--   % mp \# "plot.xlabel(" \# str label \# ")"
 -- @
 --
 -- Where important functions are:
@@ -38,17 +38,21 @@
 --
 -- You can call this plot with
 --
--- > plot [1,2,3,4,5,6] [1,3,2,5,2] @@ [o1 "'go-'", o2 "linewidth" "2"]
+-- > plot [1,2,3,4,5,6] [1,3,2,5,2] @@ [o1 "go-", o2 "linewidth" 2]
 --
 -- where '@@' applies an options list replacing the last '##'
 --
---  [@'o1'@] A single positional option
---  [@'o2'@] A keyword option
+--  [@'o1'@] A single positional option. The value is rendered into python as
+--  the appropriate datatype. Strings become python strings, bools become bools,
+--  etc. If you want to insert code verbatim into an option use 'lit'. If you
+--  want to have a raw string with no escapes use 'raw'.
+--  [@'o2'@] A keyword option. The key is awlays a string, the value is treated
+--  the same way that the option in 'o1' is treated.
 --
 -- Right now there's no easy way to bind to an option other than the last one
 -- unless you want to pass options in as parameters.
 --
--- The generated Python code should follow some invariants. It must maintain the
+-- TODO The generated Python code should follow some invariants. It must maintain the
 -- current figure in "fig", all available axes in "axes", and the current axis
 -- in "ax".
 -----------------------------------------------------------------------------
@@ -56,7 +60,8 @@
 module Graphics.Matplotlib
   ( module Graphics.Matplotlib
     -- * Creating custom plots and applying options
-  , Matplotlib(), Option(),(@@), (%), o1, o2, (##), (#), mp, def, readData)
+  , Matplotlib(), Option(),(@@), (%), o1, o2, (##), (#), mp, def, readData,
+    str, raw, lit, updateAxes)
 where
 import Data.List
 import Data.Aeson
@@ -84,11 +89,11 @@ xacorr xs ys opts = readData (xs, ys)
   % addSubplot 2 1 1
   % xcorr xs ys @@ opts
   % grid True
-  % axhline 0 @@ [o1 "0", o2 "color" "'black'", o2 "lw" "2"]
-  % addSubplot 2 1 2 @@ [o2 "sharex" "ax"]
+  % axhline 0 @@ [o1 0, o2 "color" "black", o2 "lw" 2]
+  % addSubplot 2 1 2 @@ [o2 "sharex" $ lit "ax"]
   % acorr xs @@ opts
   % grid True
-  % axhline 0 @@ [o2 "color" "'black'", o2 "lw" "2"]
+  % axhline 0 @@ [o2 "color" "black", o2 "lw" 2]
 
 -- | Plot a histogram for the given values with 'bins'
 histogram :: (MplotValue val, ToJSON t) => t -> val -> Matplotlib
@@ -105,7 +110,7 @@ scatter x y = readData (x, y)
 
 -- | Plot a line
 line :: (ToJSON t1, ToJSON t) => t1 -> t -> Matplotlib
-line x y = plot x y `def` [o1 "'-'"]
+line x y = plot x y `def` [o1 "-"]
 
 -- | Like 'plot' but takes an error bar value per point
 errorbar xs ys errs = readData (xs, ys, errs)
@@ -114,7 +119,7 @@ errorbar xs ys errs = readData (xs, ys, errs)
 -- | Plot a line given a function that will be executed for each element of
 -- given list. The list provides the x values, the function the y values.
 lineF :: (ToJSON a, ToJSON b) => (a -> b) -> [a] -> Matplotlib
-lineF f l = plot l (map f l) `def` [o1 "'-'"]
+lineF f l = plot l (map f l) `def` [o1 "-"]
 
 boxplot l = readData l
   % mp # "ax.boxplot(data" ## ")"
@@ -173,7 +178,7 @@ density l maybeStartEnd =
 -- * Matplotlib configuration
 
 -- | Set an rcParams key-value
-setParameter k v = mp # "matplotlib.rcParams['"# k #"'] = " # v
+setParameter k v = mp # "matplotlib.rcParams["# str k #"] = " # v
 
 -- | Enable or disable TeX
 setTeX :: Bool -> Matplotlib
@@ -210,11 +215,11 @@ dataHistogram a bins = mp # "plot.hist(data[" # a # "]," # bins ## ")"
 
 -- | Create a scatter plot accessing the given fields of the data array
 dataScatter :: (MplotValue val1, MplotValue val) => val1 -> val -> Matplotlib
-dataScatter a b = dataPlot a b `def` [o1 "'.'"]
+dataScatter a b = dataPlot a b `def` [o1 "."]
 
 -- | Create a line accessing the given entires of the data array
 dataLine :: (MplotValue val1, MplotValue val) => val1 -> val -> Matplotlib
-dataLine a b = dataPlot a b `def` [o1 "'-'"]
+dataLine a b = dataPlot a b `def` [o1 "-"]
 
 -- | Create a 3D contour
 contour xs ys zs =
@@ -297,7 +302,7 @@ xcorr x y = readData (x, y) % mp # "ax.xcorr(data[0], data[1]" ## ")"
 acorr x = readData x % mp # "ax.acorr(data" ## ")"
 
 -- | Plot text at a specified location
-text x y str = mp # "ax.text(" # x # "," # y # "," # "'" # str # "'" ## ")"
+text x y s = mp # "ax.text(" # x # "," # y # "," # raw s ## ")"
 
 -- * Layout, axes, and legends
 
@@ -352,8 +357,8 @@ axisXTickLabels :: MplotValue val => val -> Matplotlib
 axisXTickLabels labels = mp # "ax.set_xticklabels( (" # labels # ") " ## " )"
 
 -- | Add a title
-title :: MplotValue val => val -> Matplotlib
-title s = mp # "ax.set_title(r'" # s # "'" ## ")"
+title :: String -> Matplotlib
+title s = mp # "ax.set_title(" # raw s ## ")"
 
 -- | Show/hide grid lines
 grid :: Bool -> Matplotlib
@@ -374,16 +379,16 @@ axis3DLabels xs ys zs =
   % mp # "ax.set_zlim3d(" # minimum2 zs # ", " # maximum2 zs # ")"
 
 -- | Add a label to the x axis
-xLabel :: MplotValue val => val -> Matplotlib
-xLabel label = mp # "ax.set_xlabel(r'" # label # "'" ## ")"
+xLabel :: String -> Matplotlib
+xLabel label = mp # "ax.set_xlabel(" # raw label ## ")"
 
 -- | Add a label to the y axis
-yLabel :: MplotValue val => val -> Matplotlib
-yLabel label = mp # "ax.set_ylabel(r'" # label # "'" ## ")"
+yLabel :: String -> Matplotlib
+yLabel label = mp # "ax.set_ylabel(" # raw label ## ")"
 
 -- | Add a label to the z axis
-zLabel :: MplotValue val => val -> Matplotlib
-zLabel label = mp # "ax.set_zlabel(r'" # label # "'" ## ")"
+zLabel :: String -> Matplotlib
+zLabel label = mp # "ax.set_zlabel(" # raw label ## ")"
 
 -- * Subplots
 
