@@ -13,6 +13,7 @@ dependencies:
     - |
       echo "apply-ghc-options: everything" >> stack.yaml
     - stack build --fast
+    - stack test --no-run-tests 
 
 test:
   override:
