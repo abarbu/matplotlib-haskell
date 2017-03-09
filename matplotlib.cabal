@@ -41,6 +41,9 @@ test-suite matplotlib-test
                      , tasty
                      , tasty-hunit
                      , tasty-expected-failure
+                     , tasty-golden
+                     , bytestring
+                     , process
                      , temporary
                      , random
                      , raw-strings-qq

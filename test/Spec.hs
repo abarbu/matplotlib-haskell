@@ -1,9 +1,7 @@
 {-# language ExtendedDefaultRules, ScopedTypeVariables, QuasiQuotes #-}
 
 import Test.Tasty
-import Test.Tasty.Options
 import Test.Tasty.Runners
-import Test.Tasty.Providers
 import Test.Tasty.HUnit
 import Test.Tasty.ExpectedFailure
 import System.IO.Unsafe
@@ -14,11 +12,16 @@ import Text.RawString.QQ
 import Data.List
 import Data.List.Split
 import Control.Monad
+import Test.Tasty.Golden.Advanced
+import qualified Data.ByteString as BS
+import System.Process
+import System.IO
 
 -- * Random values for testing
 
 uniforms :: (Random a, Num a) => [a]
 uniforms = randoms (mkStdGen 42)
+
 uniforms' lo hi = randomRs (lo,hi) (mkStdGen 42)
 
 -- * Not so random values to enable some fully-reproducible tests
@@ -92,15 +95,50 @@ normals' (mean, sigma) g = map (\x -> x * sigma + mean) $ normals
 
 -- * Tests
 
-main = defaultMain tests
+main = defaultMain $ tests "All tests" testPlot
 
-tests :: TestTree
-tests = testGroup "All tests" [basicTests, wrapTest (liftM (\x -> x { resultOutcome = Success
-                                                                   , resultShortDescription =
-                                                                       case resultOutcome x of
-                                                                         Success -> resultShortDescription x
-                                                                         _ -> "Expected: " ++ resultShortDescription x
-                                                                   })) $ fragileTests, ignoreTest failingTests]
+main' = defaultMain $ tests "Golden tests" testPlotGolden
+
+main'' = defaultMain $ testGroup "All tests" [tests "Execution tests" testPlot
+                                             , toneDownTests "Unreliable across machines" $ tests "Golden tests" testPlotGolden]
+
+tests name f = testGroup name   [basicTests f,
+                                 toneDownTests "Can fail with old matplotlib" $ fragileTests f,
+                                 ignoreTest $ failingTests f]
+
+toneDownTests reason tests = wrapTest (liftM (\x -> x { resultOutcome = Success
+                                                     , resultShortDescription =
+                                                       case resultOutcome x of
+                                                         Success -> resultShortDescription x
+                                                         _ -> reason ++ ": " ++ resultShortDescription x
+                                                     })) tests
+
+testPlotGolden name fn =
+         unsafePerformIO $ tmp (\filename ->
+                                 return $ goldenTest
+                                   name
+                                   (BS.readFile ref)
+                                   (file filename fn >> BS.readFile filename)
+                                   (\g n ->
+                                       tmp (\gfile ->
+                                               tmp (\nfile -> do
+                                                       BS.writeFile gfile g
+                                                       BS.writeFile nfile n
+                                                       (code, stdout, stderr) <-
+                                                         readProcessWithExitCode "/usr/bin/compare" ["-metric"
+                                                                                                    ,"PSNR"
+                                                                                                    ,gfile
+                                                                                                    ,nfile
+                                                                                                    ,"null"] ""
+                                                       case (stderr, reads stderr) of
+                                                         ("inf", _) -> return Nothing
+                                                         (_, [(x :: Double, _)]) ->
+                                                           if x < 30 then
+                                                             return $ Just $ "Images very different; PSNR too low " ++ show x else
+                                                             return Nothing)))
+                                   (BS.writeFile ref))
+  where ref = "imgs/" ++ name ++ ".png"
+        tmp f = withSystemTempFile "a.png" (\filename h -> hClose h >> f filename)
 
 -- | Test one plot; right now we just test that the command executed without
 -- errors. We should visually compare plots somehow.
@@ -114,40 +152,40 @@ testPlot' name fn = testCase name $ tryit fn name @?= Right ""
           print c
           file ("/tmp/imgs/" ++ name ++ ".png") fn
 
-basicTests = testGroup "Basic tests"
-  [ testPlot "histogram" m1
-  , testPlot "cumulative" m2
-  , testPlot "scatter" m3
-  , testPlot "contour" m4
-  , testPlot "labelled-histogram" m5
-  , testPlot "density-bandwidth" m7
-  , testPlot "density" m8
-  , testPlot "line-function" m9
-  , testPlot "quadratic" m10
-  , testPlot "projections" m11
-  , testPlot "line-options" m12
-  , testPlot "corr" mxcorr
-  , testPlot "show-matrix" mmat
-  , testPlot "legend" mlegend
-  , testPlot "hist2DLog" mhist2DLog
-  , testPlot "eventplot" meventplot
-  , testPlot "errorbar" merrorbar
-  , testPlot "scatterhist" mscatterHist
+basicTests f = testGroup "Basic tests"
+  [ f "histogram" m1
+  , f "cumulative" m2
+  , f "scatter" m3
+  , f "contour" m4
+  , f "labelled-histogram" m5
+  , f "density-bandwidth" m7
+  , f "density" m8
+  , f "line-function" m9
+  , f "quadratic" m10
+  , f "projections" m11
+  , f "line-options" m12
+  , f "corr" mxcorr
+  , f "show-matrix" mmat
+  , f "legend" mlegend
+  , f "hist2DLog" mhist2DLog
+  , f "eventplot" meventplot
+  , f "errorbar" merrorbar
+  , f "scatterhist" mscatterHist
   ]
 
-fragileTests = testGroup "Fragile tests"
+fragileTests f = testGroup "Fragile tests"
   [ -- TODO Fails on circle ci (with latex)
-    testPlot "tex" mtex
+    f "tex" mtex
     -- TODO Fails on circle ci (labels is not valid; matplotlib too old)
-  , testPlot "boxplot" mboxplot
+  , f "boxplot" mboxplot
     -- TODO Fails on circle ci (no violin plots; matplotlib too old)
-  , testPlot "violinplot" mviolinplot
+  , f "violinplot" mviolinplot
   ]
 
-failingTests = testGroup "Failing tests"
+failingTests f = testGroup "Failing tests"
   [
     -- TODO This test case is broken
-    testPlot "sub-bars" m6
+    f "sub-bars" m6
   ]
 
 -- * These tests are fully-reproducible, the output must be identical every time
