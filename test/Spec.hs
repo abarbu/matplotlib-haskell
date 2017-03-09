@@ -133,14 +133,15 @@ basicTests = testGroup "Basic tests"
   , testPlot "eventplot" meventplot
   , testPlot "errorbar" merrorbar
   , testPlot "scatterhist" mscatterHist
-  , testPlot "violinplot" mviolinplot
   ]
 
 fragileTests = testGroup "Fragile tests"
   [ -- TODO Fails on circle ci (with latex)
     testPlot "tex" mtex
-    -- TODO Fails on circle ci (labels is not valid)
+    -- TODO Fails on circle ci (labels is not valid; matplotlib too old)
   , testPlot "boxplot" mboxplot
+    -- TODO Fails on circle ci (no violin plots; matplotlib too old)
+  , testPlot "violinplot" mviolinplot
   ]
 
 failingTests = testGroup "Failing tests"
