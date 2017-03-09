@@ -105,14 +105,14 @@ tests = testGroup "All tests" [basicTests, wrapTest (liftM (\x -> x { resultOutc
 -- | Test one plot; right now we just test that the command executed without
 -- errors. We should visually compare plots somehow.
 testPlot name fn = testCase name $ tryit fn @?= Right ""
-  where tryit fn = unsafePerformIO $ withSystemTempFile "a.png" (\file _ -> figure file fn)
+  where tryit fn = unsafePerformIO $ withSystemTempFile "a.png" (\filename _ -> file filename fn)
 
 -- | This generates examples from the test cases
 testPlot' name fn = testCase name $ tryit fn name @?= Right ""
   where tryit fn name = unsafePerformIO $ do
           c <- code fn
           print c
-          figure ("/tmp/imgs/" ++ name ++ ".png") fn
+          file ("/tmp/imgs/" ++ name ++ ".png") fn
 
 basicTests = testGroup "Basic tests"
   [ testPlot "histogram" m1
@@ -132,6 +132,8 @@ basicTests = testGroup "Basic tests"
   , testPlot "hist2DLog" mhist2DLog
   , testPlot "eventplot" meventplot
   , testPlot "errorbar" merrorbar
+  , testPlot "scatterhist" mscatterHist
+  , testPlot "violinplot" mviolinplot
   ]
 
 fragileTests = testGroup "Fragile tests"
@@ -231,3 +233,40 @@ mboxplot = subplots @@ [o2 "ncols" 2, o2 "sharey" True]
   % boxplot (take 3 $ chunksOf 10 $ map (* 2) $ normals) @@ [o2 "labels" ["X", "Y", "Z"]]
   % setSubplot "1"
   % boxplot (take 3 $ chunksOf 10 $ map (* 2) $ normals) @@ [o2 "labels" ["A", "B", "C"], o2 "showbox" False, o2 "showcaps" False]
+
+mviolinplot = subplots @@ [o2 "ncols" 2, o2 "sharey" True]
+  % setSubplot "0"
+  % violinplot (take 3 $ chunksOf 100 $ map (* 2) $ normals)
+  % setSubplot "1"
+  % violinplot (take 3 $ chunksOf 100 $ map (* 2) $ normals) @@ [o2 "showmeans" True, o2 "showmedians" True, o2 "vert" False]
+
+-- | http://matplotlib.org/examples/pylab_examples/scatter_hist.html
+mscatterHist = readData ()
+  % figure 0
+  % setSizeInches 8 8
+  -- The scatter plot
+  % axes @@ [o1 ([left, bottom', width, height] :: [Double])]
+  % scatter  x y
+  % xlim (-lim) lim
+  % ylim (-lim) lim
+  -- The histogram on the right (x)
+  % axes @@ [o1 [left, bottom_h, width, 0.2]]
+  % mp # "ax.xaxis.set_major_formatter(mticker.NullFormatter())"
+  % histogram x bins
+  % xlim (-lim) lim
+  -- The histogram on top (y)
+  % axes @@ [o1 [left_h, bottom', 0.2, height]]
+  % mp # "ax.yaxis.set_major_formatter(mticker.NullFormatter())"
+  % histogram y bins @@ [o2 "orientation" "horizontal"]
+  % ylim (-lim) lim
+  where left = 0.1
+        width = 0.65
+        bottom' = 0.1
+        height = 0.65
+        bottom_h = left + width + 0.02
+        left_h = left + width + 0.02
+        [x, y] = take 2 $ chunksOf 1000 $ map (* 2) $ normals
+        binwidth = 0.25
+        xymax = maximum [maximum $ map abs x, maximum $ map abs y]
+        lim = ((fromIntegral $ round $ xymax / binwidth) + 1) * binwidth
+        bins = [-lim,-lim+binwidth..(lim + binwidth)]

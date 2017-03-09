@@ -61,7 +61,7 @@ module Graphics.Matplotlib
   ( module Graphics.Matplotlib
     -- * Creating custom plots and applying options
   , Matplotlib(), Option(),(@@), (%), o1, o2, (##), (#), mp, def, readData,
-    str, raw, lit, updateAxes)
+    str, raw, lit, updateAxes, updateFigure)
 where
 import Data.List
 import Data.Aeson
@@ -78,8 +78,8 @@ code :: Matplotlib -> IO String
 code m = withMplot m (\str -> return $ unlines $ pyIncludes ++ str ++ pyDetach ++ pyOnscreen)
 
 -- | Save to a file
-figure :: [Char] -> Matplotlib -> IO (Either String String)
-figure filename m = withMplot m (\str -> python $ pyIncludes ++ str ++ pyFigure filename)
+file :: [Char] -> Matplotlib -> IO (Either String String)
+file filename m = withMplot m (\str -> python $ pyIncludes ++ str ++ pyFigure filename)
 
 -- * Useful plots
 
@@ -121,8 +121,13 @@ errorbar xs ys errs = readData (xs, ys, errs)
 lineF :: (ToJSON a, ToJSON b) => (a -> b) -> [a] -> Matplotlib
 lineF f l = plot l (map f l) `def` [o1 "-"]
 
-boxplot l = readData l
+-- | Create a box plot for the given data
+boxplot d = readData d
   % mp # "ax.boxplot(data" ## ")"
+
+-- | Create a violin plot for the given data
+violinplot d = readData d
+  % mp # "ax.violinplot(data" ## ")"
 
 -- | Given a grid of x and y values and a number of steps call the given
 -- function and plot the 3D contour
@@ -390,6 +395,8 @@ yLabel label = mp # "ax.set_ylabel(" # raw label ## ")"
 zLabel :: String -> Matplotlib
 zLabel label = mp # "ax.set_zlabel(" # raw label ## ")"
 
+setSizeInches w h = mp # "fig.set_size_inches(" # w # "," # h # ", forward=True)"
+
 -- * Subplots
 
 -- | Create a subplot with the coordinates (r,c,f)
@@ -405,4 +412,8 @@ subplots = mp # "fig, axes = plot.subplots(" ## ")"
 setSubplot s = mp # "ax = axes[" # s # "]"
 
 -- | Add axes to a figure
-axes = mp # "ax = axes(" ## ")" % updateAxes
+axes = mp # "ax = plot.axes(" ## ")" % updateAxes
+
+-- | Creates a new figure with the given id. If the Id is already in use it
+-- switches to that figure.
+figure id = mp # "plot.figure(" # id ## ")" % updateFigure

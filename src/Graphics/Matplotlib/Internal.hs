@@ -148,10 +148,22 @@ instance MplotValue [String] where
           f (x:xs) = toPythonOpt (str x) ++ "," ++ f xs
 instance MplotValue Double where
   toPython s = show s
+instance MplotValue [Double] where
+  toPython s = "[" ++ f s ++ "]"
+    where f [] = ""
+          f (x:xs) = toPython x ++ "," ++ f xs
 instance MplotValue Integer where
   toPython s = show s
+instance MplotValue [Integer] where
+  toPython s = "[" ++ f s ++ "]"
+    where f [] = ""
+          f (x:xs) = toPython x ++ "," ++ f xs
 instance MplotValue Int where
   toPython s = show s
+instance MplotValue [Int] where
+  toPython s = "[" ++ f s ++ "]"
+    where f [] = ""
+          f (x:xs) = toPython x ++ "," ++ f xs
 instance MplotValue Bool where
   toPython s = show s
 instance (MplotValue x) => MplotValue (x, x) where
@@ -258,6 +270,7 @@ pyIncludes = ["import matplotlib"
              ,"import matplotlib.mlab as mlab"
              ,"import matplotlib.colors as mcolors"
              ,"import matplotlib.collections as mcollections"
+             ,"import matplotlib.ticker as mticker"
              ,"from matplotlib import cm"
              ,"from mpl_toolkits.mplot3d import axes3d"
              ,"import numpy as np"
@@ -266,7 +279,8 @@ pyIncludes = ["import matplotlib"
              ,"import json"
              ,"import random, datetime"
              ,"from matplotlib.dates import DateFormatter, WeekdayLocator"
-             ,"axes = [plot.figure().gca()]"
+             ,"fig = plot.gcf()"
+             ,"axes = [plot.gca()]"
              ,"ax = axes[0]"]
 
 -- | The python command that reads external data into the python data array
@@ -303,8 +317,13 @@ raw = R
 -- | Create a literal that will inserted into the python code directly
 lit = L
 
--- | Update axes
+-- | Update axes. Should be called any time the state is changed.
 updateAxes = mp # "axes = plot.gcf().get_axes()"
+
+-- | Update the figure and the axes. Should be called any time the state is changed.
+updateFigure = mp # "fig = plot.gcf()"
+  % mp # "axes = plot.gcf().get_axes()"
+  % mp # "ax = axes[0] if len(axes) > 0 else None"
 
 -- | Smallest element of a list of lists
 minimum2 :: (Ord (t a), Ord a, Foldable t1, Foldable t) => t1 (t a) -> a
