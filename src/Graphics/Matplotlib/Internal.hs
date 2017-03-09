@@ -164,13 +164,29 @@ instance MplotValue [Int] where
   toPython s = "[" ++ f s ++ "]"
     where f [] = ""
           f (x:xs) = toPython x ++ "," ++ f xs
+instance MplotValue [R] where
+  toPython s = "[" ++ f s ++ "]"
+    where f [] = ""
+          f (x:xs) = toPython x ++ "," ++ f xs
+instance MplotValue [S] where
+  toPython s = "[" ++ f s ++ "]"
+    where f [] = ""
+          f (x:xs) = toPython x ++ "," ++ f xs
+instance MplotValue [L] where
+  toPython s = "[" ++ f s ++ "]"
+    where f [] = ""
+          f (x:xs) = toPython x ++ "," ++ f xs
 instance MplotValue Bool where
   toPython s = show s
 instance (MplotValue x) => MplotValue (x, x) where
-  toPython (n, v) = toPython n ++ " = " ++ toPython v
+  toPython (k, v) = "(" ++ toPython k ++ ", " ++ toPython v ++ ")"
 instance (MplotValue (x, y)) => MplotValue [(x, y)] where
-  toPython [] = ""
-  toPython (x:xs) = toPython x ++ ", " ++ toPython xs
+  toPython s = "[" ++ f s ++ "]"
+    where f [] = ""
+          f (x:xs) = toPython x ++ "," ++ f xs
+instance MplotValue x => MplotValue (Maybe x) where
+  toPython Nothing  = "None"
+  toPython (Just x) = toPython x
 
 default (Integer, Int, Double)
 

@@ -52,16 +52,19 @@
 -- Right now there's no easy way to bind to an option other than the last one
 -- unless you want to pass options in as parameters.
 --
--- TODO The generated Python code should follow some invariants. It must maintain the
+-- The generated Python code should follow some invariants. It must maintain the
 -- current figure in "fig", all available axes in "axes", and the current axis
--- in "ax".
+-- in "ax". Plotting commands should use the current axis, never the plot
+-- itself; the two APIs are almost identical. When creating low-level bindings
+-- one must remember to call "plot.sci" to set the current image when plotting a
+-- graph. The current spine of the axes that's being manipulated is in "spine".
 -----------------------------------------------------------------------------
 
 module Graphics.Matplotlib
   ( module Graphics.Matplotlib
     -- * Creating custom plots and applying options
-  , Matplotlib(), Option(),(@@), (%), o1, o2, (##), (#), mp, def, readData,
-    str, raw, lit, updateAxes, updateFigure)
+  , Matplotlib(), Option(),(@@), (%), o1, o2, (##), (#), mp, def, readData
+  , str, raw, lit, updateAxes, updateFigure, mapLinear)
 where
 import Data.List
 import Data.Aeson
@@ -101,20 +104,21 @@ histogram values bins = readData [values] % dataHistogram 0 bins
 
 -- | Plot a 2D histogram for the given values with 'bins'
 histogram2D x y = readData [x,y] %
-  mp # "plot.hist2d(data[0], data[1]" ## ")"
+  mp # "plot.sci(ax.hist2d(data[0], data[1]" ## ")[-1])"
 
 -- | Plot the given values as a scatter plot
 scatter :: (ToJSON t1, ToJSON t) => t1 -> t -> Matplotlib
 scatter x y = readData (x, y)
-  % mp # "ax.scatter(data[0], data[1]" ## ")"
+  % mp # "plot.sci(ax.scatter(data[0], data[1]" ## "))"
 
 -- | Plot a line
 line :: (ToJSON t1, ToJSON t) => t1 -> t -> Matplotlib
 line x y = plot x y `def` [o1 "-"]
 
 -- | Like 'plot' but takes an error bar value per point
-errorbar xs ys errs = readData (xs, ys, errs)
-  % mp # "ax.errorbar(data[0], data[1], yerr=data[2]" ## ")"
+-- errorbar :: (ToJSON x, ToJSON y, ToJSON xs, ToJSON ys) => x -> y -> Maybe xs -> Maybe ys -> Matplotlib
+errorbar xs ys xerrs yerrs = readData (xs, ys, xerrs, yerrs)
+  % mp # "ax.errorbar(data[0], data[1], xerr=data[2], yerr=data[3]" ## ")"
 
 -- | Plot a line given a function that will be executed for each element of
 -- given list. The list provides the x values, the function the y values.
@@ -165,12 +169,12 @@ line1 y = line [0..length y] y
 -- | Plot a matrix
 matShow :: ToJSON a => a -> Matplotlib
 matShow d = readData d
-            % (mp # "plot.matshow(data" ## ")")
+            % (mp # "plot.sci(ax.matshow(data" ## "))")
 
 -- | Plot a matrix
 pcolor :: ToJSON a => a -> Matplotlib
 pcolor d = readData d
-            % (mp # "plot.pcolor(np.array(data)" ## ")")
+            % (mp # "plot.sci(ax.pcolor(np.array(data)" ## "))")
 
 -- | Plot a KDE of the given functions; a good bandwith will be chosen automatically
 density :: [Double] -> Maybe (Double, Double) -> Matplotlib
@@ -197,7 +201,7 @@ setUnicode b = mp # "matplotlib.rcParams['text.latex.unicode'] = " # b
 
 -- | Plot the 'a' and 'b' entries of the data object
 dataPlot :: (MplotValue val, MplotValue val1) => val1 -> val -> Matplotlib
-dataPlot a b = mp # "p = plot.plot(data[" # a # "], data[" # b # "]" ## ")"
+dataPlot a b = mp # "p = ax.plot(data[" # a # "], data[" # b # "]" ## ")"
 
 -- | Plot the Haskell objects 'x' and 'y' as a line
 plot :: (ToJSON t, ToJSON t1) => t1 -> t -> Matplotlib
@@ -216,7 +220,7 @@ dateLine x y xunit (yearStart, monthStart, dayStart) =
 
 -- | Create a histogram for the 'a' entry of the data array
 dataHistogram :: (MplotValue val1, MplotValue val) => val1 -> val -> Matplotlib
-dataHistogram a bins = mp # "plot.hist(data[" # a # "]," # bins ## ")"
+dataHistogram a bins = mp # "ax.hist(data[" # a # "]," # bins ## ")"
 
 -- | Create a scatter plot accessing the given fields of the data array
 dataScatter :: (MplotValue val1, MplotValue val) => val1 -> val -> Matplotlib
@@ -309,7 +313,13 @@ acorr x = readData x % mp # "ax.acorr(data" ## ")"
 -- | Plot text at a specified location
 text x y s = mp # "ax.text(" # x # "," # y # "," # raw s ## ")"
 
+figText x y s = mp # "plot.figtext(" # x # "," # y # "," # raw s ## ")"
+
 -- * Layout, axes, and legends
+
+-- | Square up the aspect ratio of a plot.
+setAspect :: Matplotlib
+setAspect = mp # "ax.set_aspect(" ## ")"
 
 -- | Square up the aspect ratio of a plot.
 squareAxes :: Matplotlib
@@ -353,14 +363,6 @@ legend = mp # "ax.legend(" ## ")"
 -- TODO This refers to the plot and not an axis. Might cause trouble with subplots
 colorbar = mp # "plot.colorbar(" ## ")"
 
--- | Set the spacing of ticks on the x axis
-axisXTickSpacing :: (MplotValue val1, MplotValue val) => val1 -> val -> Matplotlib
-axisXTickSpacing nr width = mp # "ax.set_xticks(np.arange(" # nr # ")+" # width ## ")"
-
--- | Set the labels on the x axis
-axisXTickLabels :: MplotValue val => val -> Matplotlib
-axisXTickLabels labels = mp # "ax.set_xticklabels( (" # labels # ") " ## " )"
-
 -- | Add a title
 title :: String -> Matplotlib
 title s = mp # "ax.set_title(" # raw s ## ")"
@@ -397,22 +399,70 @@ zLabel label = mp # "ax.set_zlabel(" # raw label ## ")"
 
 setSizeInches w h = mp # "fig.set_size_inches(" # w # "," # h # ", forward=True)"
 
+tightLayout = mp # "fig.tight_layout()"
+
+xkcd = mp # "plot.xkcd()"
+
+-- * Ticks
+
+xticks l = mp # "ax.set_xticks(" # l # ")"
+yticks l = mp # "ax.set_yticks(" # l # ")"
+zticks l = mp # "ax.set_zticks(" # l # ")"
+
+xtickLabels l = mp # "ax.set_xticklabels(" # l # ")"
+ytickLabels l = mp # "ax.set_yticklabels(" # l # ")"
+ztickLabels l = mp # "ax.set_zticklabels(" # l # ")"
+
+-- | Set the spacing of ticks on the x axis
+axisXTickSpacing :: (MplotValue val1, MplotValue val) => val1 -> val -> Matplotlib
+axisXTickSpacing nr width = mp # "ax.set_xticks(np.arange(" # nr # ")+" # width ## ")"
+
+-- | Set the labels on the x axis
+axisXTickLabels :: MplotValue val => val -> Matplotlib
+axisXTickLabels labels = mp # "ax.set_xticklabels( (" # labels # ") " ## " )"
+
+-- | Set the spacing of ticks on the y axis
+axisYTickSpacing :: (MplotValue val1, MplotValue val) => val1 -> val -> Matplotlib
+axisYTickSpacing nr width = mp # "ax.set_yticks(np.arange(" # nr # ")+" # width ## ")"
+
+-- | Set the labels on the y axis
+axisYTickLabels :: MplotValue val => val -> Matplotlib
+axisYTickLabels labels = mp # "ax.set_yticklabels( (" # labels # ") " ## " )"
+
+axisXTicksPosition p = mp # "ax.xaxis.set_ticks_position('" # p # "')"
+axisYTicksPosition p = mp # "ax.yaxis.set_ticks_position('" # p # "')"
+
+-- * Spines
+
+spine s = mp # "spine = ax.spines['" # s # "']"
+
+spineSetBounds l h = mp # "spine.set_bounds(" # l # "," # h # ")"
+
+spineSetVisible b = mp # "spine.set_visible(" # b # ")"
+
+spineSetPosition s n = mp # "spine.set_position((" # s # "," # n # "))"
+
 -- * Subplots
 
+setAx = mp # "plot.sca(ax) "
+
 -- | Create a subplot with the coordinates (r,c,f)
-addSubplot r c f = mp # "ax = plot.gcf().add_subplot(" # r # c # f ## ")" % updateAxes
+addSubplot r c f = mp # "ax = plot.gcf().add_subplot(" # r # c # f ## ")" % updateAxes % setAx
 
 -- | Access a subplot with the coordinates (r,c,f)
-getSubplot r c f = mp # "ax = plot.subplot(" # r # "," # c # "," # f ## ")" % updateAxes
+getSubplot r c f = mp # "ax = plot.subplot(" # r # "," # c # "," # f ## ")" % updateAxes % setAx
 
 -- | Creates subplots and stores them in an internal variable
 subplots = mp # "fig, axes = plot.subplots(" ## ")"
+  % mp # "axes = np.asarray(axes)"
+  % mp # "axes = axes.flatten()"
+  % updateAxes % setAx
 
 -- | Access a subplot
-setSubplot s = mp # "ax = axes[" # s # "]"
+setSubplot s = mp # "ax = axes[" # s # "]" % setAx
 
 -- | Add axes to a figure
-axes = mp # "ax = plot.axes(" ## ")" % updateAxes
+axes = mp # "ax = plot.axes(" ## ")" % updateAxes % setAx
 
 -- | Creates a new figure with the given id. If the Id is already in use it
 -- switches to that figure.

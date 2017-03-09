@@ -1,4 +1,4 @@
-{-# language ExtendedDefaultRules, ScopedTypeVariables, QuasiQuotes #-}
+{-# language ExtendedDefaultRules, ScopedTypeVariables, QuasiQuotes, ParallelListComp #-}
 
 import Test.Tasty
 import Test.Tasty.Runners
@@ -133,7 +133,7 @@ testPlotGolden name fn =
                                                        case (stderr, reads stderr) of
                                                          ("inf", _) -> return Nothing
                                                          (_, [(x :: Double, _)]) ->
-                                                           if x < 30 then
+                                                           if x < 35 then
                                                              return $ Just $ "Images very different; PSNR too low " ++ show x else
                                                              return Nothing)))
                                    (BS.writeFile ref))
@@ -171,6 +171,11 @@ basicTests f = testGroup "Basic tests"
   , f "eventplot" meventplot
   , f "errorbar" merrorbar
   , f "scatterhist" mscatterHist
+  , f "histMulti" mhistMulti
+  , f "spines" mspines
+  , f "hists" mhists
+  , f "hinton" mhinton
+  , f "integral" mintegral
   ]
 
 fragileTests f = testGroup "Fragile tests"
@@ -252,6 +257,7 @@ mlegend = plotMapLinear (\x -> x ** 2) 0 1 100 @@ [o2 "label" "x^2"]
 
 -- | http://matplotlib.org/examples/pylab_examples/hist2d_log_demo.html
 mhist2DLog = histogram2D x y @@ [o2 "bins" 40, o2 "norm" $ lit "mcolors.LogNorm()"]
+  % setAx
   % colorbar
   where (x:y:_) = chunksOf 10000 normals
 
@@ -262,10 +268,10 @@ meventplot = plot xs ys
   where xs = sort $ take 10 uniforms
         ys = map (\x -> x ** 2) xs
 
-merrorbar = errorbar xs ys errs @@ [o2 "errorevery" 2]
+merrorbar = errorbar xs ys (Nothing :: Maybe [Double]) (Just errs) @@ [o2 "errorevery" 2]
   where xs = [0.1,0.2..4]
         ys = map (\x -> exp $ -x) xs
-        errs = map (\x -> 0.1 + 0.1 * sqrt x) xs
+        errs = [map (\x -> 0.1 + 0.1 * sqrt x) xs, map (\x -> 0.1 + 0.1 * sqrt x) ys]
 
 mboxplot = subplots @@ [o2 "ncols" 2, o2 "sharey" True]
   % setSubplot "0"
@@ -280,8 +286,7 @@ mviolinplot = subplots @@ [o2 "ncols" 2, o2 "sharey" True]
   % violinplot (take 3 $ chunksOf 100 $ map (* 2) $ normals) @@ [o2 "showmeans" True, o2 "showmedians" True, o2 "vert" False]
 
 -- | http://matplotlib.org/examples/pylab_examples/scatter_hist.html
-mscatterHist = readData ()
-  % figure 0
+mscatterHist = figure 0
   % setSizeInches 8 8
   -- The scatter plot
   % axes @@ [o1 ([left, bottom', width, height] :: [Double])]
@@ -309,3 +314,92 @@ mscatterHist = readData ()
         xymax = maximum [maximum $ map abs x, maximum $ map abs y]
         lim = ((fromIntegral $ round $ xymax / binwidth) + 1) * binwidth
         bins = [-lim,-lim+binwidth..(lim + binwidth)]
+
+mhistMulti = subplots @@ [o2 "nrows" 2, o2 "ncols" 2]
+  % setSubplot 0
+  % histogram x nrBins @@ [o2 "normed" 1, o2 "histtype" "bar", o2 "color" ["red", "tan", "lime"], o2 "label" ["red", "tan", "lime"]]
+  % legend @@ [o2 "prop" $ lit "{'size': 10}"]
+  % title "bars with legend"
+  % setSubplot 1
+  % histogram x nrBins @@ [o2 "normed" 1, o2 "histtype" "bar", o2 "stacked" True]
+  % title "stacked bar"
+  % setSubplot 2
+  % histogram x nrBins @@ [o2 "histtype" "step", o2 "stacked" True, o2 "fill" False]
+  % title "stacked bar"
+  % setSubplot 3
+  % histogram (map (\x -> take x normals) [2000, 5000, 10000]) nrBins @@ [o2 "histtype" "bar"]
+  % title "different sample sizes"
+  % tightLayout
+  where nrBins = 10
+        x = take 3 $ chunksOf 1000 $ normals
+
+mspines = plot x y @@ [o1 "k--"]
+  % plot x y' @@ [o1 "ro"]
+  % xlim 0 (2 * pi)
+  % xticks [0 :: Double, pi, 2*pi]
+  % xtickLabels (map raw ["0", "$\\pi$", "2$\\pi$"])
+  % ylim (-1.5) 1.5
+  % yticks [-1 :: Double, 0, 1]
+  % spine "left"
+  % spineSetBounds (-1) 1
+  % spine "right"
+  % spineSetVisible False
+  % spine "top"
+  % spineSetVisible False
+  % axisYTicksPosition "left"
+  % axisXTicksPosition "bottom"
+  where x  = mapLinear (\x -> x) 0 (2 * pi) 50
+        y  = map sin x
+        y' = zipWith (\a b -> a + 0.1*b) y normals
+
+mhists = h 10 1.5
+       % h 4 1
+       % h 15 2
+       % h 6 0.5
+  where ns mu var = map (\x -> mu + x * var) $ take 1000 normals
+        h mu var = histogram (ns mu var) 25 @@ [o2 "histtype" "stepfilled"
+                                             ,o2 "alpha" 0.8
+                                             ,o2 "normed" True]
+
+mhinton = mp # "ax.patch.set_facecolor('gray')"
+  % setAspect @@ [o1 "equal", o1 "box"]
+  % mp # "ax.xaxis.set_major_locator(plot.NullLocator())"
+  % mp # "ax.yaxis.set_major_locator(plot.NullLocator())"
+  % foldl (\a (x,y,w) -> a % f x y w) mp m
+  % mp # "ax.autoscale_view()"
+  % mp # "ax.invert_yaxis()"
+  where m = [ (x,y,w) | x <- [0..19], y <- [0..19] | w <- (map (\x -> x - 0.5) normals) ]
+        maxWeight = maximum $ map (\(_,_,v) -> abs v) m
+        f x y w = mp # "ax.add_patch(plot.Rectangle("
+                     # "[" # (x - size / 2) # "," # (y - size / 2) # "]"
+                     # ", " # size # ", " # size
+                     # ", facecolor='" # color # "', edgecolor='" # color # "'))"
+          where color = if w > 0 then "white" else "black"
+                size  = sqrt $ abs w / maxWeight
+
+mintegral = subplots
+  % plot x y @@ [o1 "r", o2 "linewidth" 2]
+  % ylim 0 (maximum y)
+  % mp # "ax.add_patch(plot.Polygon(" # ([(a, 0)] ++ zip ix iy ++ [(b,0)]) ## "))"
+    @@ [o2 "facecolor" "0.9", o2 "edgecolor" "0.5"]
+  % text (0.5 * (a + b)) 30 [r|$\int_a^b f(x)\mathrm{d}x$|]
+    @@ [o2 "horizontalalignment" "center", o2 "fontsize" 20]
+  % figText 0.9 0.05 "$x$"
+  % figText 0.1 0.9  "$y$"
+  % spine "right"
+  % spineSetVisible False
+  % spine "top"
+  % spineSetVisible False
+  % axisXTicksPosition "bottom"
+  % xticks (a, b)
+  % xtickLabels (raw "$a$", raw "$b$")
+  % yticks ([] :: [Double])
+  where func x = (x - 3) * (x - 5) * (x - 7) + 85
+        -- integral limits
+        a = 2 :: Double
+        b = 9 :: Double
+        (x :: [Double]) = mapLinear (\x -> x) 0 10 100
+        y = map func x
+        -- shaded region
+        (ix :: [Double]) = mapLinear (\x -> x) a b 100
+        iy = map func ix
