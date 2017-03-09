@@ -71,15 +71,15 @@ import Graphics.Matplotlib.Internal
 
 -- | Show a plot, blocks until the figure is closed
 onscreen :: Matplotlib -> IO (Either String String)
-onscreen m = withMplot m (\str -> python $ pyIncludes ++ str ++ pyDetach ++ pyOnscreen)
+onscreen m = withMplot m (\s -> python $ pyIncludes "" ++ s ++ pyDetach ++ pyOnscreen)
 
 -- | Print the python code that would be executed
 code :: Matplotlib -> IO String
-code m = withMplot m (\str -> return $ unlines $ pyIncludes ++ str ++ pyDetach ++ pyOnscreen)
+code m = withMplot m (\s -> return $ unlines $ pyIncludes (pyBackend "agg") ++ s ++ pyDetach ++ pyOnscreen)
 
 -- | Save to a file
 file :: [Char] -> Matplotlib -> IO (Either String String)
-file filename m = withMplot m (\str -> python $ pyIncludes ++ str ++ pyFigure filename)
+file filename m = withMplot m (\s -> python $ pyIncludes (pyBackend "agg") ++ s ++ pyFigure filename)
 
 -- * Useful plots
 

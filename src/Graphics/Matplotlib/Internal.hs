@@ -259,29 +259,30 @@ python codeStr =
              Right <$> readProcess "/usr/bin/python3" [codeFile] ""))
          (\e -> return $ Left $ show (e :: IOException))
 
+pyBackend backend = "matplotlib.use('" ++ backend ++ "')"
+
 -- | The standard python includes of every plot
-pyIncludes :: [[Char]]
-pyIncludes = ["import matplotlib"
-             -- TODO Provide a way to set the render backend
-             -- ,"matplotlib.use('GtkAgg')"
-             ,"import matplotlib.path as mpath"
-             ,"import matplotlib.patches as mpatches"
-             ,"import matplotlib.pyplot as plot"
-             ,"import matplotlib.mlab as mlab"
-             ,"import matplotlib.colors as mcolors"
-             ,"import matplotlib.collections as mcollections"
-             ,"import matplotlib.ticker as mticker"
-             ,"from matplotlib import cm"
-             ,"from mpl_toolkits.mplot3d import axes3d"
-             ,"import numpy as np"
-             ,"import os"
-             ,"import sys"
-             ,"import json"
-             ,"import random, datetime"
-             ,"from matplotlib.dates import DateFormatter, WeekdayLocator"
-             ,"fig = plot.gcf()"
-             ,"axes = [plot.gca()]"
-             ,"ax = axes[0]"]
+pyIncludes :: String -> [[Char]]
+pyIncludes backend = ["import matplotlib"
+                     ,backend
+                     ,"import matplotlib.path as mpath"
+                     ,"import matplotlib.patches as mpatches"
+                     ,"import matplotlib.pyplot as plot"
+                     ,"import matplotlib.mlab as mlab"
+                     ,"import matplotlib.colors as mcolors"
+                     ,"import matplotlib.collections as mcollections"
+                     ,"import matplotlib.ticker as mticker"
+                     ,"from matplotlib import cm"
+                     ,"from mpl_toolkits.mplot3d import axes3d"
+                     ,"import numpy as np"
+                     ,"import os"
+                     ,"import sys"
+                     ,"import json"
+                     ,"import random, datetime"
+                     ,"from matplotlib.dates import DateFormatter, WeekdayLocator"
+                     ,"fig = plot.gcf()"
+                     ,"axes = [plot.gca()]"
+                     ,"ax = axes[0]"]
 
 -- | The python command that reads external data into the python data array
 pyReadData :: [Char] -> [[Char]]
