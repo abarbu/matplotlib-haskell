@@ -101,9 +101,9 @@ pdfBivariateNormal x y sigmax sigmay mux muy sigmaxy =
 
 -- * Tests
 
-main' = defaultMain $ tests "All tests" testPlot
+main = defaultMain $ tests "All tests" testPlot
 
-main = defaultMain $ tests "Golden tests" testPlotGolden
+main' = defaultMain $ tests "Golden tests" testPlotGolden
 
 main'' = defaultMain $ testGroup "All tests" [tests "Execution tests" testPlot
                                              , toneDownTests "Unreliable across machines" $ tests "Golden tests" testPlotGolden]
@@ -196,8 +196,7 @@ basicTests f = testGroup "Basic tests"
   ]
 
 fragileTests f = testGroup "Fragile tests"
-  [ -- TODO Fails on circle ci (with latex)
-    f "tex" mtex
+  [ f "tex" mtex -- TODO Fails on circle ci (with latex)
     -- TODO Fails on circle ci (labels is not valid; matplotlib too old)
   , f "boxplot" mboxplot
     -- TODO Fails on circle ci (no violin plots; matplotlib too old)
