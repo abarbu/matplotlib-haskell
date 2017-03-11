@@ -1,6 +1,6 @@
 # Matplotlib
 
-[![Build Status](https://img.shields.io/circleci/project/github/abarbu/matplotlib-haskell.svg)](circleci.com/gh/abarbu/matplotlib-haskell)
+[![Build Status](https://img.shields.io/circleci/project/github/abarbu/matplotlib-haskell.svg)](https://circleci.com/gh/abarbu/matplotlib-haskell)
 [![Hackage](https://img.shields.io/hackage/v/matplotlib.svg)](https://hackage.haskell.org/package/matplotlib)
 
 Haskell bindings to Python's Matplotlib. It's high time that Haskell had a
