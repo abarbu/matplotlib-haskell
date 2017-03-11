@@ -279,6 +279,7 @@ m @@ os = option m os
 def :: Matplotlib -> [Option] -> Matplotlib
 def m os = optionFn (defFn os) m
 
+-- | Merge two sets of options
 defFn :: [Option] -> [Option] -> [Option]
 defFn os os' = merge ps' ps ++ (nub $ ks' ++ ks)
            where isK (K _ _) = True
