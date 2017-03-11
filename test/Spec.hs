@@ -257,11 +257,13 @@ mxcorr = xacorr xs ys [o2 "usevlines" True, o2 "maxlags" 50, o2 "normed" True, o
         (ys :: [Double]) = take 100 normals
 
 -- | http://matplotlib.org/examples/pylab_examples/tex_unicode_demo.html
-mtex = plotMapLinear cos 0 1 100
-  % setTeX True
+mtex = setTeX True
   % setUnicode True
+  % figure
+  % addSubplot 1 1 1
+  % plotMapLinear cos 0 1 100
   % xlabel [r|\textbf{time (s)}|]
-  % ylabel [r|\textit{Velocity (\u00B0/sec)}|] @@ [o2 "fontsize" 16]
+  % ylabel "\\textit{Velocity (°/sec)}" @@ [o2 "fontsize" 16]
   % title [r|\TeX\ is Number $\displaystyle\sum_{n=1}^\infty\frac{-e^{i\pi}}{2^n}$!"|] @@ [o2 "fontsize" 16, o2 "color" "r"]
   % grid True
 
