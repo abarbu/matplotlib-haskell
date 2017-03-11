@@ -219,7 +219,7 @@ setParameter k v = mp # "matplotlib.rcParams["# str k #"] = " # v
 
 -- | Enable or disable TeX
 setTeX :: Bool -> Matplotlib
-setTeX b = mp # "matplotlib.rcParams['text.usetex'] = " # b
+setTeX b = mp # "plot.rc('text', usetex="# b #")"
 
 -- | Enable or disable unicode
 setUnicode :: Bool -> Matplotlib
