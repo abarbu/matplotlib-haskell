@@ -16,6 +16,7 @@ import Test.Tasty.Golden.Advanced
 import qualified Data.ByteString as BS
 import System.Process
 import System.IO
+import Numeric.AD
 
 -- * Random values for testing
 
@@ -93,11 +94,16 @@ normals = boxMullers $ randoms (mkStdGen 42)
 -- deviation).
 normals' (mean, sigma) g = map (\x -> x * sigma + mean) $ normals
 
+pdfBivariateNormal x y sigmax sigmay mux muy sigmaxy =
+  1/(2*pi*sigmax*sigmay*(sqrt(1-rho^2)))*exp(-z/(2*(1-rho^2)))
+  where rho = sigmaxy/(sigmax*sigmay)
+        z = (x-mux)^2/sigmax^2-(2*rho*(x-mux)*(y-muy))/(sigmax*sigmay)+(y-muy)^2/sigmay^2
+
 -- * Tests
 
-main = defaultMain $ tests "All tests" testPlot
+main' = defaultMain $ tests "All tests" testPlot
 
-main' = defaultMain $ tests "Golden tests" testPlotGolden
+main = defaultMain $ tests "Golden tests" testPlotGolden
 
 main'' = defaultMain $ testGroup "All tests" [tests "Execution tests" testPlot
                                              , toneDownTests "Unreliable across machines" $ tests "Golden tests" testPlotGolden]
@@ -153,17 +159,17 @@ testPlot' name fn = testCase name $ tryit fn name @?= Right ""
           file ("/tmp/imgs/" ++ name ++ ".png") fn
 
 basicTests f = testGroup "Basic tests"
-  [ f "histogram" m1
-  , f "cumulative" m2
-  , f "scatter" m3
-  , f "contour" m4
-  , f "labelled-histogram" m5
-  , f "density-bandwidth" m7
-  , f "density" m8
-  , f "line-function" m9
-  , f "quadratic" m10
-  , f "projections" m11
-  , f "line-options" m12
+  [ f "histogram" mhistogram
+  , f "cumulative" mcumulative
+  , f "scatter" mscatter
+  , f "contour" mcontour
+  , f "labelled-histogram" mlabelledHistogram
+  , f "density-bandwidth" mdensityBandwidth
+  , f "density" mdensity
+  , f "line-function" mlineFunction
+  , f "quadratic" mQuadratic
+  , f "projections" mProjections
+  , f "line-options" mlineOptions
   , f "corr" mxcorr
   , f "show-matrix" mmat
   , f "legend" mlegend
@@ -176,6 +182,17 @@ basicTests f = testGroup "Basic tests"
   , f "hists" mhists
   , f "hinton" mhinton
   , f "integral" mintegral
+  , f "quiver" mquiver
+  , f "quiver-fancy" mquiverFancy
+  , f "polar" mpolar
+  , f "bivariateNormal" mbivariateNormal
+  , f "images" mimages
+  , f "pcolorlog" mpcolorlog
+  , f "pie" mpie
+  , f "stacked" mstacked
+  , f "annotation" mannotation
+  , f "streamplot" mstreamplot
+  , f "griddata" mgriddata
   ]
 
 fragileTests f = testGroup "Fragile tests"
@@ -190,47 +207,47 @@ fragileTests f = testGroup "Fragile tests"
 failingTests f = testGroup "Failing tests"
   [
     -- TODO This test case is broken
-    f "sub-bars" m6
+    f "sub-bars" msubBars
   ]
 
 -- * These tests are fully-reproducible, the output must be identical every time
 
-m1 :: Matplotlib
-m1 = histogram xs 8
+mhistogram :: Matplotlib
+mhistogram = histogram xs 8
 
-m2 :: Matplotlib
-m2 = histogram xs 8 @@ [o2 "cumulative" True]
+mcumulative = histogram xs 8 @@ [o2 "cumulative" True]
 
-m3 = scatter xs ys
+mscatter = scatter xs ys
 
 degreesRadians a = a * pi / 180.0
 radiansDegrees a = a * 180.0 / pi
 
-m4 = contourF (\a b -> sin (degreesRadians a) + cos (degreesRadians b)) (-100) 100 (-200) 200 10
+mcontour = contourF (\a b -> sin (degreesRadians a) + cos (degreesRadians b)) (-100) 100 (-200) 200 10
 
-m5 = histogram xs 7
-   % yLabel "number of queries"
-   % xLabel "true positives"
+mlabelledHistogram = histogram xs 7
+   % ylabel "number of queries"
+   % xlabel "true positives"
 
-m6 = subplotBarsLabelled
+-- TODO Broken test
+msubBars = subplotBarsLabelled
        [[40, 50, 20, 50], [10, 20, 30, 40], [40, 50, 20, 50]]
        ["a", "b", "c", "d"] []
       % title "Wee a title"
-      % xLabel "X"
-      % yLabel "Y"
+      % xlabel "X"
+      % ylabel "Y"
 
-m7 = densityBandwidth [2.1, 1.3, 0.4, 1.9, 5.1, 6.2] 1.5 (Just (-6, 11))
+mdensityBandwidth = densityBandwidth [2.1, 1.3, 0.4, 1.9, 5.1, 6.2] 1.5 (Just (-6, 11))
   % ylim 0 0.2
 
-m8 = density [2.1, 1.3, 0.4, 1.9, 5.1, 6.2] (Just (-6, 11))
+mdensity = density [2.1, 1.3, 0.4, 1.9, 5.1, 6.2] (Just (-6, 11))
 
-m9 = lineF (\x -> x**2) [0,0.01..1]
+mlineFunction = lineF (\x -> x**2) [0,0.01..1]
 
-m10 = plotMapLinear (\x -> x**2) (-2) 2 100 @@ [o1 "."] % title "Quadratic function"
+mQuadratic = plotMapLinear (\x -> x**2) (-2) 2 100 @@ [o1 "."] % title "Quadratic function"
 
-m11 = projectionsF (\a b -> cos (degreesRadians a) + sin (degreesRadians b)) (-100) 100 (-200) 200 10
+mProjections = projectionsF (\a b -> cos (degreesRadians a) + sin (degreesRadians b)) (-100) 100 (-200) 200 10
 
-m12 = plot [1,2,3,4,5,6] [1,3,2,5,2,4] @@ [o1 "go-", o2 "linewidth" 2]
+mlineOptions = plot [1,2,3,4,5,6] [1,3,2,5,2,4] @@ [o1 "go-", o2 "linewidth" 2]
 
 -- * These tests can be random and may not be exactly the same every time
 
@@ -243,8 +260,8 @@ mxcorr = xacorr xs ys [o2 "usevlines" True, o2 "maxlags" 50, o2 "normed" True, o
 mtex = plotMapLinear cos 0 1 100
   % setTeX True
   % setUnicode True
-  % xLabel [r|\textbf{time (s)}|]
-  % yLabel [r|\textit{Velocity (\u00B0/sec)}|] @@ [o2 "fontsize" 16]
+  % xlabel [r|\textbf{time (s)}|]
+  % ylabel [r|\textit{Velocity (\u00B0/sec)}|] @@ [o2 "fontsize" 16]
   % title [r|\TeX\ is Number $\displaystyle\sum_{n=1}^\infty\frac{-e^{i\pi}}{2^n}$!"|] @@ [o2 "fontsize" 16, o2 "color" "r"]
   % grid True
 
@@ -286,7 +303,7 @@ mviolinplot = subplots @@ [o2 "ncols" 2, o2 "sharey" True]
   % violinplot (take 3 $ chunksOf 100 $ map (* 2) $ normals) @@ [o2 "showmeans" True, o2 "showmedians" True, o2 "vert" False]
 
 -- | http://matplotlib.org/examples/pylab_examples/scatter_hist.html
-mscatterHist = figure 0
+mscatterHist = figure @@ [o1 0]
   % setSizeInches 8 8
   -- The scatter plot
   % axes @@ [o1 ([left, bottom', width, height] :: [Double])]
@@ -403,3 +420,198 @@ mintegral = subplots
         -- shaded region
         (ix :: [Double]) = mapLinear (\x -> x) a b 100
         iy = map func ix
+
+mquiver = quiver x y u v (Nothing :: Maybe [Double]) @@ [o2 "units" "width"]
+  % quiverKey 0.9 0.93 2 (raw [r|$2 \frac{m}{s}$|])
+    @@ [o2 "labelpos" "E", o2 "coordinates" "figure"]
+  % xlim (-0.2) 6.4
+  % ylim (-0.2) 6.4
+  where m = [ (x,y,cos x,sin y) | x <- [0,0.2..2*pi], y <- [0,0.2..2*pi] ]
+        x = map (\(x,_,_,_) -> x) m
+        y = map (\(_,x,_,_) -> x) m
+        u = map (\(_,_,x,_) -> x) m
+        v = map (\(_,_,_,x) -> x) m
+
+mquiverFancy = quiver x y u v (Just mag) @@ [o2 "units" "x"
+                                            ,o2 "pivot" "tip"
+                                            ,o2 "width" 0.022
+                                            ,o2 "scale" (1 / 0.15)]
+  % quiverKey 0.9 0.93 1 (raw [r|$2 \frac{m}{s}$|])
+    @@ [o2 "labelpos" "E", o2 "coordinates" "figure"]
+  % scatter x y @@ [o2 "color" "k", o2 "s" 5]
+  % xlim (-0.2) 6.4
+  % ylim (-0.2) 6.4
+  where m = [ (x,y,cos x,sin y) | x <- [0,0.2..2*pi], y <- [0,0.2..2*pi] ]
+        x = map (\(x,_,_,_) -> x) m
+        y = map (\(_,x,_,_) -> x) m
+        u = map (\(_,_,x,_) -> x) m
+        v = map (\(_,_,_,x) -> x) m
+        mag = zipWith (\x x' -> sqrt(x**2 + x'**2)) u v
+
+mpolar = rc "grid" @@ [o2 "color" "#316931", o2 "linewidth" 1, o2 "linestyle" "-"]
+  % rc "xtick" @@ [o2 "labelsize" 15]
+  % rc "ytick" @@ [o2 "labelsize" 15]
+  % figure @@ [o2 "figsize" (8::Int,8::Int)]
+  % addAxes @@ [o1 [0.1, 0.1, 0.8, 0.8::Double], o2 "projection" "polar"
+               -- TODO My matplotlib doesn't seem to have this property
+               -- , o2 "facecolor" "#d5de9c"
+               ]
+  % plot theta r @@ [o2 "color" "#ee8d18", o2 "lw" 3, o2 "label" "a line"]
+  % plot (map (\x -> 0.5*x) theta) r
+         @@ [o2 "color" "blue", o2 "ls" "--", o2 "lw" 3, o2 "label" "another line"]
+  % legend
+  where r = [0,0.01..3.0]
+        theta = map (\x -> 2*pi*x) r
+
+mbivariateNormal =
+  imshow vs @@ [o2 "interpolation" "bilinear"
+               ,o2 "cmap" $ raw "RdYlGn"
+               ,o2 "origin" "lower"
+               ,o2 "extent" [-3::Double, 3, -3, 3]
+               ,o2 "vmin" $ (0-) $ maximum $ map abs vs'
+               ,o2 "vmax" $ maximum $ map abs vs']
+  where delta = 0.025::Double
+        xs = [-3.0,-3.0+delta..3.0]
+        ys = [-3.0,-3.0+delta..3.0]
+        vs = [[pdfBivariateNormal x y 1.5 0.5 1.0 1.0 0.0
+               - pdfBivariateNormal x y 1.0 1.0 0.0 0.0 0.0
+              | x <- xs]
+              | y <- ys]
+        vs' = foldl' (++) [] vs
+
+-- TODO This is subtly broken
+mimages = -- figure @@ [o2 "figsize" (10::Int,10::Int)]
+  -- %
+  subplots @@ [o2 "nrows" 1, o2 "ncols" 2]
+  % setSubplot 0
+  % imshow "data/heightmap.png" @@ [o2 "interpolation" "nearest"]
+  % setSubplot 1
+  % mp # "ls = mcolors.LightSource(azdeg=315, altdeg=45)"
+  % mp # "ax.imshow(ls.shade(img, cmap=cm.gist_earth))"
+  -- TODO This doesn't work on my matplab version
+  -- vert_exag=0.05,
+  --, blend_mode='overlay'
+  % xlabel "overlay blend mode"
+
+mpcolorlog = figure
+  % addSubplot 2 1 1
+  % pcolor3 xs' ys' vs @@ [o2 "cmap" $ raw "PuBu_r"]
+  % colorbar
+  % addSubplot 2 1 2
+  % pcolor3 xs' ys' vs @@ [o2 "norm"
+                            (lit $ "mcolors.LogNorm(vmin="++(show $ minimum vs')++
+                              ", vmax="++(show $ maximum vs')++")")
+                          ,o2 "cmap" $ raw "PuBu_r"]
+  % colorbar
+  where delta = 0.1::Double
+        xs = [-3.0,-3.0+delta..3.0]
+        ys = [-3.0,-3.0+delta..3.0]
+        vs = [[pdfBivariateNormal x y 0.1 0.2 1.0 1.0 0.0
+               + 0.1 * pdfBivariateNormal x y 1.0 1.0 0.0 0.0 0.0
+              | x <- xs]
+              | y <- ys]
+        xs' = [[ x | x <- xs]| y <- ys]
+        ys' = [[ y | x <- xs]| y <- ys]
+        vs' = foldl' (++) [] vs
+
+mpie = pie [15, 30, 45, 10 :: Double]
+  @@ [o2 "explode" [0, 0.05, 0, 0 :: Double]
+     ,o2 "labels" ["Frogs", "Hogs", "Dogs", "Logs"]
+     ,o2 "autopct" "%.0f%%"
+     ,o2 "shadow" True]
+
+-- | http://matplotlib.org/examples/pylab_examples/bar_stacked.html
+mstacked =
+  -- TODO The locations of the bars is off
+    bar [0..4] ms @@ [o1 width, o2 "color" "#d62728", o2 "yerr" mStd, o2 "label" "ms"]
+  % bar [0..4] ws @@ [o1 width, o2 "bottom" ms,       o2 "yerr" wStd, o2 "label" "ws"]
+  % xticks [0..4 :: Int]
+  % xtickLabels "['G1', 'G2', 'G3', 'G4', 'G5']"
+  % title "Scores"
+  % ylabel "Score"
+  % yticks [0,10..80 :: Int]
+  % legend
+  where ms    = [20 :: Double, 35, 30, 35, 27]
+        ws    = [25 :: Double, 32, 34, 20, 25]
+        mStd  = [2 :: Double, 3, 4, 1, 2]
+        wStd  = [3 :: Double, 5, 2, 3, 3]
+        width = 0.35 :: Double
+
+mannotation = -- figure @@ [o2 "figsize" (10::Int,10::Int)]
+  -- TODO This is subtly broken
+  -- TODO Dictionaries
+    plot t s @@ [o2 "lw" 3]
+  % xlim (-1) 5
+  % ylim (-4) 3
+  % annotate "straight" @@ [o2 "xy" [0, 1::Double], o2 "xycoords" "data", o2 "xytext" [-50, 30 :: Double]
+                           ,o2 "textcoords" "offset points", o2 "arrowprops" (lit "dict(arrowstyle='->')")]
+  % annotate "arc3,\\nrad 0.2" @@ [o2 "xy" [0.5, -1::Double], o2 "xycoords" "data", o2 "xytext" [-80, -60 :: Double]
+                                 ,o2 "textcoords" "offset points"
+                                 ,o2 "arrowprops" (lit "dict(arrowstyle='->', connectionstyle='arc3,rad=.2')")]
+  % annotate "arc,\\nangle 50" @@ [o2 "xy" [1, 1::Double], o2 "xycoords" "data", o2 "xytext" [-90, 50 :: Double]
+                                  ,o2 "textcoords" "offset points"
+                                  ,o2 "arrowprops" (lit "dict(arrowstyle='->', connectionstyle='arc,angleA=0,armA=50,rad=10')")]
+  % annotate "arc,\\narms" @@ [o2 "xy" [1.5, -1::Double], o2 "xycoords" "data", o2 "xytext" [-80, -60 :: Double]
+                              ,o2 "textcoords" "offset points"
+                              ,o2 "arrowprops" (lit "dict(arrowstyle='->', connectionstyle='arc,angleA=0,armA=40,angleB=-90,armB=30,rad=7')")]
+  % annotate "angle,\\nangle 90" @@ [o2 "xy" [2, 1::Double], o2 "xycoords" "data", o2 "xytext" [-70, 30 :: Double]
+                   ,o2 "textcoords" "offset points"
+                   ,o2 "arrowprops" (lit "dict(arrowstyle='->', connectionstyle='angle,angleA=0,angleB=90,rad=10')")]
+  % annotate "angle3,\\nangle -90" @@ [o2 "xy" [2.5, -1::Double], o2 "xycoords" "data", o2 "xytext" [-80, -60 :: Double]
+                   ,o2 "textcoords" "offset points"
+                   ,o2 "arrowprops" (lit "dict(arrowstyle='->', connectionstyle='angle3,angleA=0,angleB=-90')")]
+  % annotate "angle,\\nround" @@ [o2 "xy" [3, 1::Double], o2 "xycoords" "data", o2 "xytext" [-60, 30 :: Double]
+                   ,o2 "textcoords" "offset points"
+                   ,o2 "bbox" (lit "dict(boxstyle='round', fc='0.8')")
+                   ,o2 "arrowprops" (lit "dict(arrowstyle='->', connectionstyle='angle,angleA=0,angleB=90,rad=10')")]
+  % annotate "angle,\\nround4" @@ [o2 "xy" [3.5, -1::Double], o2 "xycoords" "data", o2 "xytext" [-70, -80 :: Double]
+                   ,o2 "textcoords" "offset points"
+                   ,o2 "bbox" (lit "dict(boxstyle='round4,pad=.5', fc='0.8')")
+                   ,o2 "size" 20
+                   ,o2 "arrowprops" (lit "dict(arrowstyle='->', connectionstyle='angle,angleA=0,angleB=-90,rad=10')")]
+  % annotate "angle,\\nshrink" @@ [o2 "xy" [4, 1::Double], o2 "xycoords" "data", o2 "xytext" [-60, 30 :: Double]
+                   ,o2 "textcoords" "offset points"
+                   ,o2 "bbox" (lit "dict(boxstyle='round', fc='0.8')")
+                   ,o2 "arrowprops" (lit "dict(arrowstyle='->', connectionstyle='angle,angleA=0,angleB=90,rad=10')")]
+  -- TODO This annotation doesn't render correctly on my matplotlib version
+  % annotate "" @@ [o2 "xy" [4, 1::Double], o2 "xycoords" "data", o2 "xytext" [4.5, -1 :: Double]
+                   ,o2 "textcoords" "offset points"
+                   ,o2 "arrowprops" (lit "dict(arrowstyle='<->', connectionstyle='bar', ec='k', shrinkA=5, shrinkB=5)")]
+  where t = [0, 0.01 .. 5.0 :: Double]
+        s = map (\x -> cos $ 2*pi*x) t
+
+mstreamplot = streamplot xs ys xs' ys' @@ [o2 "linewidth" mag']
+  -- useful for seeing the energy landscape
+  -- pcolor3 xmat ymat vs
+  where delta = 0.05::Double
+        xs = [-3.0,-3.0+delta..3.0]
+        ys = [-3.0,-3.0+delta..3.0]
+        xmat = [[ x | x <- xs]| y <- ys]
+        ymat = [[ y | x <- xs]| y <- ys]
+        ms = [[grad' (\[xv,yv] ->
+                         pdfBivariateNormal xv yv 0.4 0.7 1.0 1.0 0.0
+                         + pdfBivariateNormal xv yv 1.0 1.0 (-1.0) (-1.0) 0.0)
+                [x,y]
+              | x <- xs]
+             | y <- ys] :: [[(Double, [Double])]]
+        vs  = map2 (\(v, _)      -> v) ms
+        xs' = map2 (\(_, [x, _]) -> x) ms
+        ys' = map2 (\(_, [_, y]) -> y) ms
+        mag' = zipWith (\lx ly -> zipWith (\x y -> 5 * (log $ 1 + (sqrt $ x*x + y*y))) lx ly) xs' ys'
+        map2 f l = map (\r -> map f r) l
+
+mgriddata = readData (x, y, z, xi, yi)
+  -- TODO This requires a lot of manual indexing. Next big API change will be to
+  -- have references to loaded data.
+  % mp # "data.append(mlab.griddata(data[0], data[1], data[2], data[3], data[4], interp='linear'))"
+  % mp # "plot.sci(ax.contour(data[3], data[4], data[5], 15, linewidths=0.5, colors='k'))"
+  % mp # "plot.sci(ax.contourf(data[3], data[4], data[5], 15, vmax=abs(data[5]).max(), vmin=-abs(data[5]).max()))"
+  % colorbar
+  % scatter x y @@ [o2 "marker" "o", o2 "s" 5, o2 "zorder" 10]
+  % xlim (-2) 2
+  % ylim (-2) 2
+  % title "Grid interpolation"
+  where [x, y] = take 2 $ chunksOf 200 $ map (\x -> 4 * (x - 0.5)) $ uniforms
+        z = zipWith (\x y -> x*(exp $ -(x**2) - y**2)) x y
+        xi = mapLinear (\x -> x) (-2.1) 2.1 300
+        yi = mapLinear (\x -> x) (-2.1) 2.1 300

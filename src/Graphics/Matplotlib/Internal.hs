@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, ScopedTypeVariables, FlexibleContexts, ExtendedDefaultRules #-}
+{-# LANGUAGE FlexibleInstances, ScopedTypeVariables, FlexibleContexts, ExtendedDefaultRules, ExistentialQuantification #-}
 -- |
 -- Internal representations of the Matplotlib data. These are not API-stable
 -- and may change. You can easily extend the provided bindings without relying
@@ -33,10 +33,10 @@ data Matplotlib = Matplotlib {
 -- | A maplotlib command, right now we have a very shallow embedding essentially
 -- dealing in strings containing python code as well as the ability to load
 -- data. The loaded data should be a json object.
-data MplotCommand
-  = LoadData B.ByteString
+data MplotCommand =
+  LoadData B.ByteString
+  | forall x. MplotImage x => LoadImage x
   | Exec { es :: String }
-  deriving (Show, Eq, Ord)
 
 -- | Throughout the API we need to accept options in order to expose
 -- matplotlib's many configuration options.
@@ -50,6 +50,7 @@ data Option =
 -- | Convert an 'MplotCommand' to python code, doesn't do much right now
 toPy :: MplotCommand -> String
 toPy (LoadData _) = error "withMplot needed to load data"
+toPy (LoadImage _) = error "withMplot needed to load images"
 toPy (Exec str)   = str
 
 -- | Resolve the pending command with no options provided.
@@ -75,6 +76,12 @@ withMplot m f = preload cs []
                 B.hPutStr dataHandle obj
                 hClose dataHandle
                 preload l $ ((map Exec $ pyReadData dataFile) ++ cmds))
+    preload ((LoadImage img):l) cmds = do
+      withSystemTempFile "data.json" $
+        (\dataFile dataHandle -> do
+            hClose dataHandle
+            obj <- saveHaskellImage img dataFile
+            preload l $ ([Exec $ "img = " ++ (loadPythonImage img obj dataFile)] ++ cmds))
     preload (c:l) cmds = preload l (c:cmds)
 
 -- | Create a plot that executes the string as python code
@@ -85,9 +92,13 @@ mplotString s = Matplotlib S.empty Nothing (S.singleton $ Exec s)
 mp :: Matplotlib
 mp = Matplotlib S.empty Nothing S.empty
 
--- | Load the given data into the 'data' array
+-- | Load the given data into the python "data" array
 readData :: ToJSON a => a -> Matplotlib
 readData d = Matplotlib (S.singleton $ LoadData $ encode d) Nothing S.empty
+
+-- | Load the given image into python "img" variable
+readImage :: MplotImage i => i -> Matplotlib
+readImage i = Matplotlib (S.singleton $ LoadImage i) Nothing S.empty
 
 infixl 5 %
 -- | Combine two matplotlib commands
@@ -187,8 +198,27 @@ instance (MplotValue (x, y)) => MplotValue [(x, y)] where
 instance MplotValue x => MplotValue (Maybe x) where
   toPython Nothing  = "None"
   toPython (Just x) = toPython x
+instance MplotValue [[Double]] where
+  toPython s = "np.asarray([" ++ f s ++ "])"
+    where f [] = ""
+          f (x:xs) = toPython x ++ "," ++ f xs
 
 default (Integer, Int, Double)
+
+-- | The class of Haskell images or references to imagese which can be
+-- transferred to matplotlib.
+class MplotImage a where
+  saveHaskellImage :: a -> FilePath -> IO String
+  loadPythonImage :: a -> String -> FilePath -> String
+
+-- | An image that is a string is a file path.
+instance MplotImage String where
+  saveHaskellImage _ _ = return ""
+  loadPythonImage s _ _ = "mpimg.imread('" ++ toPython s ++ "')"
+
+instance ToJSON a => MplotImage [[a]] where
+  saveHaskellImage d fp = (B.writeFile fp $ encode d) >> return ""
+  loadPythonImage s _ fp = unlines $ pyReadData fp
 
 -- $ Options
 
@@ -285,10 +315,11 @@ pyIncludes backend = ["import matplotlib"
                      ,"import matplotlib.patches as mpatches"
                      ,"import matplotlib.pyplot as plot"
                      ,"import matplotlib.mlab as mlab"
+                     ,"import matplotlib.cm as cm"
                      ,"import matplotlib.colors as mcolors"
                      ,"import matplotlib.collections as mcollections"
                      ,"import matplotlib.ticker as mticker"
-                     ,"from matplotlib import cm"
+                     ,"import matplotlib.image as mpimg"
                      ,"from mpl_toolkits.mplot3d import axes3d"
                      ,"import numpy as np"
                      ,"import os"
@@ -303,6 +334,10 @@ pyIncludes backend = ["import matplotlib"
 -- | The python command that reads external data into the python data array
 pyReadData :: [Char] -> [[Char]]
 pyReadData filename = ["data = json.loads(open('" ++ filename ++ "').read())"]
+
+-- | The python command that reads an image into the img variable
+pyReadImage :: [Char] -> [[Char]]
+pyReadImage filename = ["img = mpimg.imread('" ++ filename ++ "')"]
 
 -- | Detach python so we don't block (TODO This isn't working reliably)
 pyDetach :: [[Char]]

@@ -57,13 +57,14 @@
 -- in "ax". Plotting commands should use the current axis, never the plot
 -- itself; the two APIs are almost identical. When creating low-level bindings
 -- one must remember to call "plot.sci" to set the current image when plotting a
--- graph. The current spine of the axes that's being manipulated is in "spine".
+-- graph. The current spine of the axes that's being manipulated is in
+-- "spine". The current quiver is in "q"
 -----------------------------------------------------------------------------
 
 module Graphics.Matplotlib
   ( module Graphics.Matplotlib
     -- * Creating custom plots and applying options
-  , Matplotlib(), Option(),(@@), (%), o1, o2, (##), (#), mp, def, readData
+  , Matplotlib(), Option(),(@@), (%), o1, o2, (##), (#), mp, def, readData, readImage
   , str, raw, lit, updateAxes, updateFigure, mapLinear)
 where
 import Data.List
@@ -89,6 +90,7 @@ file filename m = withMplot m (\s -> python $ pyIncludes (pyBackend "agg") ++ s 
 -- | Plot the cross-correlation and autocorrelation of several variables. TODO Due to
 -- a limitation in the options mechanism this takes explicit options.
 xacorr xs ys opts = readData (xs, ys)
+  % figure
   % addSubplot 2 1 1
   % xcorr xs ys @@ opts
   % grid True
@@ -110,6 +112,11 @@ histogram2D x y = readData [x,y] %
 scatter :: (ToJSON t1, ToJSON t) => t1 -> t -> Matplotlib
 scatter x y = readData (x, y)
   % mp # "plot.sci(ax.scatter(data[0], data[1]" ## "))"
+
+-- | Create a bar at a position with a height
+bar :: (ToJSON t1, ToJSON t) => t1 -> t -> Matplotlib
+bar left height = readData (left, height)
+  % mp # "ax.bar(data[0], data[1]" ## ")"
 
 -- | Plot a line
 line :: (ToJSON t1, ToJSON t) => t1 -> t -> Matplotlib
@@ -171,10 +178,28 @@ matShow :: ToJSON a => a -> Matplotlib
 matShow d = readData d
             % (mp # "plot.sci(ax.matshow(data" ## "))")
 
+-- | Plot an image
+imshow :: MplotImage a => a -> Matplotlib
+imshow i = readImage i
+            % (mp # "plot.sci(ax.imshow(img" ## "))")
+
 -- | Plot a matrix
 pcolor :: ToJSON a => a -> Matplotlib
 pcolor d = readData d
             % (mp # "plot.sci(ax.pcolor(np.array(data)" ## "))")
+
+-- | Plot a matrix
+pcolor3 x y z = readData (x,y,z)
+                % (mp # "plot.sci(ax.pcolor(np.array(data[0]),np.array(data[1]),np.array(data[2])" ## "))")
+
+-- | Create a non-uniform image from samples
+nonUniformImage x y z = readData (x,y,z)
+  % mp # "im = mpimg.NonUniformImage(ax" ## ")"
+  % mp # "im.set_data(data[0], data[1], data[2])"
+
+-- | Create a pie chart
+pie l = readData l
+  % mp # "plot.pie(" # l ## ")"
 
 -- | Plot a KDE of the given functions; a good bandwith will be chosen automatically
 density :: [Double] -> Maybe (Double, Double) -> Matplotlib
@@ -185,6 +210,9 @@ density l maybeStartEnd =
         sqr x = x * x
 
 -- * Matplotlib configuration
+
+-- | Set an rc parameter
+rc s = mp # "plot.rc(" # str s ## ")"
 
 -- | Set an rcParams key-value
 setParameter k v = mp # "matplotlib.rcParams["# str k #"] = " # v
@@ -206,6 +234,9 @@ dataPlot a b = mp # "p = ax.plot(data[" # a # "], data[" # b # "]" ## ")"
 -- | Plot the Haskell objects 'x' and 'y' as a line
 plot :: (ToJSON t, ToJSON t1) => t1 -> t -> Matplotlib
 plot x y = readData (x, y) % dataPlot 0 1
+
+streamplot x y u v = readData (x, y, u, v)
+  % mp # "ax.streamplot(np.asarray(data[0]), np.asarray(data[1]), np.asarray(data[2]), np.asarray(data[3])" ## ")"
 
 -- | Plot x against y where x is a date.
 --   xunit is something like 'weeks', yearStart, monthStart, dayStart are an offset to x.
@@ -310,10 +341,23 @@ xcorr x y = readData (x, y) % mp # "ax.xcorr(data[0], data[1]" ## ")"
 -- | Plot auto-correlation
 acorr x = readData x % mp # "ax.acorr(data" ## ")"
 
+-- | A quiver plot; color is optional and can be nothing
+quiver x y u v Nothing = readData(x,y,u,v)
+  % mp # "q = ax.quiver(data[0], data[1], data[2], data[3]" ## ")"
+quiver x y u v (Just c) = readData(x,y,u,v,c)
+  % mp # "q = ax.quiver(data[0], data[1], data[2], data[3], data[4]" ## ")"
+
+-- | A key of a given size with a label for a quiver plot
+quiverKey x y u label = mp # "ax.quiverkey(q, "#x#", "#y#", "#u#", "#label##")"
+
 -- | Plot text at a specified location
 text x y s = mp # "ax.text(" # x # "," # y # "," # raw s ## ")"
 
+-- | Add a text to a figure instead of a particular plot
 figText x y s = mp # "plot.figtext(" # x # "," # y # "," # raw s ## ")"
+
+-- | Add an annotation
+annotate s = mp # "ax.annotate(" # str s ## ")"
 
 -- * Layout, axes, and legends
 
@@ -386,16 +430,16 @@ axis3DLabels xs ys zs =
   % mp # "ax.set_zlim3d(" # minimum2 zs # ", " # maximum2 zs # ")"
 
 -- | Add a label to the x axis
-xLabel :: String -> Matplotlib
-xLabel label = mp # "ax.set_xlabel(" # raw label ## ")"
+xlabel :: String -> Matplotlib
+xlabel label = mp # "ax.set_xlabel(" # raw label ## ")"
 
 -- | Add a label to the y axis
-yLabel :: String -> Matplotlib
-yLabel label = mp # "ax.set_ylabel(" # raw label ## ")"
+ylabel :: String -> Matplotlib
+ylabel label = mp # "ax.set_ylabel(" # raw label ## ")"
 
 -- | Add a label to the z axis
-zLabel :: String -> Matplotlib
-zLabel label = mp # "ax.set_zlabel(" # raw label ## ")"
+zlabel :: String -> Matplotlib
+zlabel label = mp # "ax.set_zlabel(" # raw label ## ")"
 
 setSizeInches w h = mp # "fig.set_size_inches(" # w # "," # h # ", forward=True)"
 
@@ -461,9 +505,12 @@ subplots = mp # "fig, axes = plot.subplots(" ## ")"
 -- | Access a subplot
 setSubplot s = mp # "ax = axes[" # s # "]" % setAx
 
--- | Add axes to a figure
+-- | Add axes to a plot
 axes = mp # "ax = plot.axes(" ## ")" % updateAxes % setAx
+
+-- | Add axes to a figure
+addAxes = mp # "ax = fig.add_axes(" ## ")" % updateAxes % setAx
 
 -- | Creates a new figure with the given id. If the Id is already in use it
 -- switches to that figure.
-figure id = mp # "plot.figure(" # id ## ")" % updateFigure
+figure = mp # "plot.figure(" ## ")" % updateFigure
