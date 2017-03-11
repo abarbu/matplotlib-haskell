@@ -192,7 +192,6 @@ basicTests f = testGroup "Basic tests"
   , f "stacked" mstacked
   , f "annotation" mannotation
   , f "streamplot" mstreamplot
-  , f "griddata" mgriddata
   ]
 
 fragileTests f = testGroup "Fragile tests"
@@ -201,6 +200,8 @@ fragileTests f = testGroup "Fragile tests"
   , f "boxplot" mboxplot
     -- TODO Fails on circle ci (no violin plots; matplotlib too old)
   , f "violinplot" mviolinplot
+    -- TODO Needs a fairly recent matplotlib; too old for circleci
+  , f "griddata" mgriddata
   ]
 
 failingTests f = testGroup "Failing tests"
