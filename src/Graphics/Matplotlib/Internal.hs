@@ -332,13 +332,18 @@ pyIncludes backend = ["import matplotlib"
                      ,"axes = [plot.gca()]"
                      ,"ax = axes[0]"]
 
+-- | These will be Python strings and slashes would cause unwanted control characters.
+escapeSlashes ('\\':cs) = '\\':'\\':escapeSlashes cs
+escapeSlashes (c:cs) = c:escapeSlashes cs
+escapeSlashes [] = []
+
 -- | The python command that reads external data into the python data array
 pyReadData :: [Char] -> [[Char]]
-pyReadData filename = ["data = json.loads(open('" ++ filename ++ "').read())"]
+pyReadData filename = ["data = json.loads(open('" ++ escapeSlashes filename ++ "').read())"]
 
 -- | The python command that reads an image into the img variable
 pyReadImage :: [Char] -> [[Char]]
-pyReadImage filename = ["img = mpimg.imread('" ++ filename ++ "')"]
+pyReadImage filename = ["img = mpimg.imread('" ++ escapeSlashes filename ++ "')"]
 
 -- | Detach python so we don't block (TODO This isn't working reliably)
 pyDetach :: [[Char]]
@@ -353,7 +358,7 @@ pyOnscreen = ["plot.draw()"
 
 -- | Python code that saves a figure
 pyFigure :: [Char] -> [[Char]]
-pyFigure output = ["plot.savefig('" ++ output ++ "')"]
+pyFigure output = ["plot.savefig('" ++ escapeSlashes output ++ "')"]
 
 -- | Create a positional option
 o1 x = P $ toPythonOpt x
