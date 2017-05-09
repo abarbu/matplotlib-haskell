@@ -70,16 +70,17 @@ where
 import Data.List
 import Data.Aeson
 import Graphics.Matplotlib.Internal
+import Control.Concurrent(forkIO)
 
 -- * Running a plot
 
 -- | Show a plot, blocks until the figure is closed
-onscreen :: Matplotlib -> IO (Either String String)
-onscreen m = withMplot m (\s -> python $ pyIncludes "" ++ s ++ pyDetach ++ pyOnscreen)
+onscreen :: Matplotlib -> IO ()
+onscreen m = (forkIO $ (withMplot m (\s -> python $ pyIncludes "" ++ s ++ pyOnscreen) >> return ())) >> return ()
 
 -- | Print the python code that would be executed
 code :: Matplotlib -> IO String
-code m = withMplot m (\s -> return $ unlines $ pyIncludes (pyBackend "agg") ++ s ++ pyDetach ++ pyOnscreen)
+code m = withMplot m (\s -> return $ unlines $ pyIncludes (pyBackend "agg") ++ s ++ pyOnscreen)
 
 -- | Save to a file
 file :: [Char] -> Matplotlib -> IO (Either String String)

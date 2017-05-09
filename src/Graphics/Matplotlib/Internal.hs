@@ -64,7 +64,7 @@ resolvePending m = m { mpCommands =
 
 -- | The io action is given a list of python commands to execute (note that
 -- these are commands in the sense of lines of python code; each inidivudal line
--- may not be parseable on its own
+-- may not be parseable on its own)
 withMplot :: Matplotlib -> ([String] -> IO a) -> IO a
 withMplot m f = preload cs []
   where
