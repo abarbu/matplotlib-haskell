@@ -4,7 +4,7 @@ dependencies:
     - ".stack-work"
   pre:
     - rm -rf /opt/circleci/.pyenv
-    - curl -sSL https://get.haskellstack.org/ | sh
+    - stack upgrade
     - sudo apt-get install -y python3-pip
     - sudo apt-get install -y python3-matplotlib
     - sudo apt-get install -y python3-numpy
