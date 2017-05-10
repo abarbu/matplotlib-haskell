@@ -1,5 +1,5 @@
 name:                matplotlib
-version:             0.4.3
+version:             0.4.5
 synopsis:            Bindings to Matplotlib; a Python plotting library
 description:
     Matplotlib is probably the most full featured plotting library out there.
@@ -30,6 +30,8 @@ library
                      , aeson
                      , temporary
                      , containers
+                     , split
+                     , filepath
   default-language:    Haskell2010
 
 test-suite matplotlib-test
