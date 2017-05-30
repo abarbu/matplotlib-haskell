@@ -15,6 +15,7 @@ import Control.Exception
 import qualified Data.Sequence as S
 import Data.Sequence (Seq, (|>), (><))
 import Data.Maybe
+import Data.Monoid
 import GHC.Exts(toList)
 
 -- | A handy miscellaneous function to linearly map over a range of numbers in a given number of steps
@@ -29,6 +30,11 @@ data Matplotlib = Matplotlib {
   , mpPendingOption :: Maybe ([Option] -> MplotCommand)   -- ^ A pending computation that is affected by applied options
   , mpRest :: Seq MplotCommand  -- ^ Computations that follow the one that is pending
   }
+
+-- | Monoid instance for Matplotlib type
+instance Monoid Matplotlib where
+    mempty  = mp
+    mappend = (%)
 
 -- | A maplotlib command, right now we have a very shallow embedding essentially
 -- dealing in strings containing python code as well as the ability to load
