@@ -444,7 +444,7 @@ zlabel label = mp # "ax.set_zlabel(" # raw label ## ")"
 
 setSizeInches w h = mp # "fig.set_size_inches(" # w # "," # h # ", forward=True)"
 
-tightLayout = mp # "fig.tight_layout()"
+tightLayout = mp # "fig.tight_layout(" ## ")"
 
 xkcd = mp # "plot.xkcd()"
 
