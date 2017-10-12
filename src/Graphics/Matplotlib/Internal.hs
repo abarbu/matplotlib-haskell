@@ -8,6 +8,7 @@ import System.IO.Temp
 import System.Process
 import Data.Aeson
 import Control.Monad
+import Control.DeepSeq
 import System.IO
 import qualified Data.ByteString.Lazy as B
 import Data.List
@@ -36,6 +37,9 @@ instance Monoid Matplotlib where
     mempty  = mp
     mappend = (%)
 
+instance NFData Matplotlib where
+    rnf (Matplotlib cs po re) = rnf cs `seq` rnf po `seq` rnf re
+
 -- | A maplotlib command, right now we have a very shallow embedding essentially
 -- dealing in strings containing python code as well as the ability to load
 -- data. The loaded data should be a json object.
@@ -43,6 +47,11 @@ data MplotCommand =
   LoadData B.ByteString
   | forall x. MplotImage x => LoadImage x
   | Exec { es :: String }
+
+instance NFData MplotCommand where
+    rnf (LoadData b) = rnf b
+    rnf (Exec es)    = rnf es
+    -- don't care too much about the LoadImage
 
 -- | Throughout the API we need to accept options in order to expose
 -- matplotlib's many configuration options.

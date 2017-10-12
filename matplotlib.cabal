@@ -25,6 +25,7 @@ library
   exposed-modules:     Graphics.Matplotlib.Internal
                      , Graphics.Matplotlib
   build-depends:       base >= 4.7 && < 5
+                     , deepseq
                      , process
                      , bytestring
                      , aeson
