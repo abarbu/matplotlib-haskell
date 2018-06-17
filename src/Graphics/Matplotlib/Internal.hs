@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, ScopedTypeVariables, FlexibleContexts, ExtendedDefaultRules, ExistentialQuantification #-}
+{-# LANGUAGE FlexibleInstances, ScopedTypeVariables, FlexibleContexts, ExtendedDefaultRules, ExistentialQuantification, CPP #-}
 -- |
 -- Internal representations of the Matplotlib data. These are not API-stable
 -- and may change. You can easily extend the provided bindings without relying
@@ -35,7 +35,12 @@ data Matplotlib = Matplotlib {
 -- | Monoid instance for Matplotlib type
 instance Monoid Matplotlib where
     mempty  = mp
+#if !MIN_VERSION_base(4,11,0)
     mappend = (%)
+#else
+instance Semigroup Matplotlib where
+    (<>) = (%)
+#endif
 
 instance NFData Matplotlib where
     rnf (Matplotlib cs po re) = rnf cs `seq` rnf po `seq` rnf re
