@@ -17,6 +17,7 @@ import qualified Data.ByteString as BS
 import System.Process
 import System.IO
 import Numeric.AD
+import System.Directory
 
 -- * Random values for testing
 
@@ -101,12 +102,18 @@ pdfBivariateNormal x y sigmax sigmay mux muy sigmaxy =
 
 -- * Tests
 
-main = defaultMain $ tests "All tests" testPlot
+main = do
+  createDirectoryIfMissing "/tmp/imgs/"
+  defaultMain $ tests "All tests" testPlot
 
-main' = defaultMain $ tests "Golden tests" testPlotGolden
+main' = do
+  createDirectoryIfMissing "/tmp/imgs/"
+  defaultMain $ tests "Golden tests" testPlotGolden
 
-main'' = defaultMain $ testGroup "All tests" [tests "Execution tests" testPlot
-                                             , toneDownTests "Unreliable across machines" $ tests "Golden tests" testPlotGolden]
+main'' = do
+  createDirectoryIfMissing "/tmp/imgs/"
+  defaultMain $ testGroup "All tests" [tests "Execution tests" testPlot
+                                      , toneDownTests "Unreliable across machines" $ tests "Golden tests" testPlotGolden]
 
 tests name f = testGroup name   [basicTests f,
                                  toneDownTests "Can fail with old matplotlib" $ fragileTests f,

@@ -42,7 +42,7 @@ sudo apt-get install -y python3 python3-pip python3-matplotlib python3-numpy pyt
 If you're using conda
 
 ```bash
-conda install matplotlib scipy tk
+conda install -y matplotlib scipy tk
 ```
 
 If you have instructions for other machines or OSes let me know. We require the
@@ -55,10 +55,16 @@ Once you have the prerequisites you can install using the standard incantation
 stack install matplotlib
 ```
 
-or
+If you use LaTeX markup you will need the requisite packages
 
 ```bash
-cabal install matplotlib
+sudo apt-get install -y texlive-full
+```
+
+Or with conda
+
+```bash
+conda install -y -c conda-forge texlive-core
 ```
 
 ### Examples
