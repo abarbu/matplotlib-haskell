@@ -1,5 +1,5 @@
 name:                matplotlib
-version:             0.7.2
+version:             0.7.3
 synopsis:            Bindings to Matplotlib; a Python plotting library
 description:
     Matplotlib is probably the most full featured plotting library out there.
@@ -45,6 +45,7 @@ test-suite matplotlib-test
                      , tasty-hunit
                      , tasty-expected-failure
                      , tasty-golden
+                     , directory
                      , bytestring
                      , process
                      , temporary

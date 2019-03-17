@@ -103,15 +103,15 @@ pdfBivariateNormal x y sigmax sigmay mux muy sigmaxy =
 -- * Tests
 
 main = do
-  createDirectoryIfMissing "/tmp/imgs/"
+  createDirectoryIfMissing False "/tmp/imgs/"
   defaultMain $ tests "All tests" testPlot
 
 main' = do
-  createDirectoryIfMissing "/tmp/imgs/"
+  createDirectoryIfMissing False "/tmp/imgs/"
   defaultMain $ tests "Golden tests" testPlotGolden
 
 main'' = do
-  createDirectoryIfMissing "/tmp/imgs/"
+  createDirectoryIfMissing False "/tmp/imgs/"
   defaultMain $ testGroup "All tests" [tests "Execution tests" testPlot
                                       , toneDownTests "Unreliable across machines" $ tests "Golden tests" testPlotGolden]
 
