@@ -139,7 +139,7 @@ testPlotGolden name fn =
                                                        case (stderr, reads stderr) of
                                                          ("inf", _) -> return Nothing
                                                          (_, [(x :: Double, _)]) ->
-                                                           if x < 35 then
+                                                           if x < 25 then
                                                              return $ Just $ "Images very different; PSNR too low " ++ show x else
                                                              return Nothing)))
                                    (BS.writeFile ref))
@@ -148,14 +148,12 @@ testPlotGolden name fn =
 
 -- | Test one plot; right now we just test that the command executed without
 -- errors. We should visually compare plots somehow.
-testPlot name fn = testCase name $ tryit fn @?= Right ""
+testPlot' name fn = testCase name $ tryit fn @?= Right ""
   where tryit fn = unsafePerformIO $ withSystemTempFile "a.png" (\filename _ -> file filename fn)
 
 -- | This generates examples from the test cases
-testPlot' name fn = testCase name $ tryit fn name @?= Right ""
+testPlot name fn = testCase name $ tryit fn name @?= Right ""
   where tryit fn name = unsafePerformIO $ do
-          c <- code fn
-          print c
           file ("/tmp/imgs/" ++ name ++ ".png") fn
 
 basicTests f = testGroup "Basic tests"
@@ -336,11 +334,11 @@ mscatterHist = figure @@ [o1 0]
 
 mhistMulti = subplots @@ [o2 "nrows" 2, o2 "ncols" 2]
   % setSubplot 0
-  % histogram x nrBins @@ [o2 "normed" 1, o2 "histtype" "bar", o2 "color" ["red", "tan", "lime"], o2 "label" ["red", "tan", "lime"]]
+  % histogram x nrBins @@ [o2 "density" 1, o2 "histtype" "bar", o2 "color" ["red", "tan", "lime"], o2 "label" ["red", "tan", "lime"]]
   % legend @@ [o2 "prop" $ lit "{'size': 10}"]
   % title "bars with legend"
   % setSubplot 1
-  % histogram x nrBins @@ [o2 "normed" 1, o2 "histtype" "bar", o2 "stacked" True]
+  % histogram x nrBins @@ [o2 "density" 1, o2 "histtype" "bar", o2 "stacked" True]
   % title "stacked bar"
   % setSubplot 2
   % histogram x nrBins @@ [o2 "histtype" "step", o2 "stacked" True, o2 "fill" False]
@@ -378,7 +376,7 @@ mhists = h 10 1.5
   where ns mu var = map (\x -> mu + x * var) $ take 1000 normals
         h mu var = histogram (ns mu var) 25 @@ [o2 "histtype" "stepfilled"
                                              ,o2 "alpha" 0.8
-                                             ,o2 "normed" True]
+                                             ,o2 "density" True]
 
 mhinton = mp # "ax.patch.set_facecolor('gray')"
   % setAspect @@ [o1 "equal", o1 "box"]
