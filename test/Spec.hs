@@ -116,7 +116,7 @@ main'' = do
                                       , toneDownTests "Unreliable across machines" $ tests "Golden tests" testPlotGolden]
 
 tests name f = testGroup name   [basicTests f,
-                                 toneDownTests "Can fail with old matplotlib" $ fragileTests f,
+                                 toneDownTests "Can fail with old matplotlib or data" $ fragileTests f,
                                  ignoreTest $ failingTests f]
 
 toneDownTests reason tests = wrapTest (liftM (\x -> x { resultOutcome = Success
@@ -191,7 +191,6 @@ basicTests f = testGroup "Basic tests"
   , f "quiver-fancy" mquiverFancy
   , f "polar" mpolar
   , f "bivariateNormal" mbivariateNormal
-  , f "images" mimages
   , f "pcolorlog" mpcolorlog
   , f "pie" mpie
   , f "stacked" mstacked
@@ -207,6 +206,8 @@ fragileTests f = testGroup "Fragile tests"
   , f "violinplot" mviolinplot
     -- TODO Needs a fairly recent matplotlib; too old for circleci
   , f "griddata" mgriddata
+    -- TODO Needs access to a data file
+  , f "images" mimages
   ]
 
 failingTests f = testGroup "Failing tests"
