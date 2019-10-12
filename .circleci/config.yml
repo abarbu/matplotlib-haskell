@@ -1,0 +1,36 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: "ubuntu:18.04"
+    steps:
+      - checkout
+      - restore_cache:
+          name: Restore Cached Dependencies
+          keys:
+            - matplotlib-haskell-{{ checksum "package.yaml" }}
+      - run:
+          name: System-wide dependencies
+        command: |-
+          apt-get install -y python3-pip python3-matplotlib python3-numpy
+          wget -qO- https://get.haskellstack.org/ | sh
+      - run:
+          name: Resolve/Update Dependencies
+          command: stack setup
+      - run:
+          name: Build
+        command: |-
+          echo "apply-ghc-options: everything" >> stack.yaml
+          stack build --fast
+      - run:
+          name: Run tests
+          command: stack test --fast
+      - save_cache:
+          name: Cache Dependencies
+          key: cci-demo-haskell-v2-{{ checksum "package.yaml" }}
+          paths:
+            - ".stack-work"
+            - "/root/.stack"
+      - store_artifacts: # upload build artifact for display in CircleCi
+          path: ~/.local/bin/circleci-demo-haskell-exe
+          destination: matplotlib-haskell
