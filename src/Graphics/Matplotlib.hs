@@ -222,10 +222,6 @@ setParameter k v = mp # "matplotlib.rcParams["# str k #"] = " # v
 setTeX :: Bool -> Matplotlib
 setTeX b = mp # "plot.rc('text', usetex="# b #")"
 
--- | Enable or disable unicode
-setUnicode :: Bool -> Matplotlib
-setUnicode b = mp # "matplotlib.rcParams['text.latex.unicode'] = " # b
-
 -- * Basic plotting commands
 
 -- | Plot the 'a' and 'b' entries of the data object

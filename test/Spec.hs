@@ -264,7 +264,6 @@ mxcorr = xacorr xs ys [o2 "usevlines" True, o2 "maxlags" 50, o2 "normed" True, o
 
 -- | http://matplotlib.org/examples/pylab_examples/tex_unicode_demo.html
 mtex = setTeX True
-  % setUnicode True
   % figure
   % addSubplot 1 1 1
   % plotMapLinear cos 0 1 100
