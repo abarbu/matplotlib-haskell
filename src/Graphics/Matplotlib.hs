@@ -46,7 +46,7 @@
 --  the appropriate datatype. Strings become python strings, bools become bools,
 --  etc. If you want to insert code verbatim into an option use 'lit'. If you
 --  want to have a raw string with no escapes use 'raw'.
---  [@'o2'@] A keyword option. The key is awlays a string, the value is treated
+--  [@'o2'@] A keyword option. The key is always a string, the value is treated
 --  the same way that the option in 'o1' is treated.
 --
 -- Right now there's no easy way to bind to an option other than the last one
