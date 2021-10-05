@@ -348,6 +348,12 @@ pyIncludes backend = ["import matplotlib"
                      ,"import json"
                      ,"import random, datetime"
                      ,"from matplotlib.dates import DateFormatter, WeekdayLocator"
+                     -- We set this rcParams due to:
+                     --     bivariateNormal:    /run/user/1000/code12548-89.py:30: MatplotlibDeprecationWarning: shading='flat' when X and Y have the same dimensions as C is deprecated since 3.3.  Either specify the corners of the quadrilaterals with X and Y, or pass shading='auto', 'nearest' or 'gouraud', or set rcParams['pcolor.shading'].  This will become an error two minor releases later.
+                     --   plot.sci(ax.pcolor(np.array(data[0]),np.array(data[1]),np.array(data[2]),cmap=r'PuBu_r'))
+                     -- /run/user/1000/code12548-89.py:36: MatplotlibDeprecationWarning: shading='flat' when X and Y have the same dimensions as C is deprecated since 3.3.  Either specify the corners of the quadrilaterals with X and Y, or pass shading='auto', 'nearest' or 'gouraud', or set rcParams['pcolor.shading'].  This will become an error two minor releases later.
+                     --   plot.sci(ax.pcolor(np.array(data[0]),np.array(data[1]),np.array(data[2]),norm=mcolors.LogNorm(vmin=1.964128034639681e-6, vmax=7.963602137747198),cmap=r'PuBu_r'))
+                     ,"plot.rcParams['pcolor.shading'] ='auto'"
                      ,"fig = plot.gcf()"
                      ,"axes = [plot.gca()]"
                      ,"ax = axes[0]"]

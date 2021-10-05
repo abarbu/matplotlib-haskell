@@ -414,7 +414,7 @@ grid t = mp # "ax.grid(" # t # ")"
 
 -- | Enable 3D projection
 axis3DProjection :: Matplotlib
-axis3DProjection = mp # "ax = plot.gca(projection='3d')"
+axis3DProjection = mp # "ax = plot.gca() if plot.gca().name == '3d' else plot.subplot(projection='3d')"
 
 -- | Label and set limits of a set of 3D axis
 -- TODO This is a mess, does both more and less than it claims.

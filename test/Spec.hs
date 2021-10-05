@@ -610,9 +610,9 @@ mstreamplot = streamplot xs ys xs' ys' @@ [o2 "linewidth" mag']
 mgriddata = readData (x, y, z, xi, yi)
   -- TODO This requires a lot of manual indexing. Next big API change will be to
   -- have references to loaded data.
-  % mp # "data.append(interpolate.griddata((data[0], data[1]), data[2], tuple(np.meshgrid(data[3], data[4])), method='cubic', rescale=True))"
-  % mp # "plot.sci(ax.contour(data[3], data[4], data[5], 15, linewidths=0.5, colors='k'))"
-  % mp # "plot.sci(ax.contourf(data[3], data[4], data[5], 15, vmax=abs(data[5]).max(), vmin=-abs(data[5]).max()))"
+  % mp # "data.append(interpolate.griddata((data[0], data[1]), data[2], tuple(np.meshgrid(data[3], data[4])), method='linear', rescale=True))"
+  % mp # "plot.contour(data[3], data[4], data[5], 15, linewidths=0.5, colors='k')"
+  % mp # "plot.contourf(data[3], data[4], data[5], 15, extend='both')"
   % colorbar
   % scatter x y @@ [o2 "marker" "o", o2 "s" 5, o2 "zorder" 10]
   % xlim (-2) 2
