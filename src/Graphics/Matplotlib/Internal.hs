@@ -344,6 +344,7 @@ pyIncludes backend = ["import matplotlib"
                      ,"import numpy as np"
                      ,"from scipy import interpolate"
                      ,"import os"
+                     ,"import io"
                      ,"import sys"
                      ,"import json"
                      ,"import random, datetime"
@@ -385,6 +386,13 @@ pyOnscreen = ["plot.draw()"
 -- | Python code that saves a figure
 pyFigure :: [Char] -> [[Char]]
 pyFigure output = ["plot.savefig('" ++ escapeSlashes output ++ "')"]
+
+-- | Python code that returns SVG for a figure
+pySVG :: [[Char]]
+pySVG =
+  ["i = io.StringIO()"
+  ,"plot.savefig(i, format='svg')"
+  ,"print(i.getvalue())"]
 
 -- | Create a positional option
 o1 x = P $ toPythonOpt x

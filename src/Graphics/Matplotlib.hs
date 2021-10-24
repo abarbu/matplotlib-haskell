@@ -86,6 +86,10 @@ code m = withMplot m (\s -> return $ unlines $ pyIncludes (pyBackend "agg") ++ s
 file :: [Char] -> Matplotlib -> IO (Either String String)
 file filename m = withMplot m (\s -> python $ pyIncludes (pyBackend "agg") ++ s ++ pyFigure filename)
 
+-- | Get the SVG for a figure
+svg :: Matplotlib -> IO (Either String String)
+svg m = withMplot m (\s -> python $ pyIncludes "" ++ s ++ pySVG)
+
 -- * Useful plots
 
 -- | Plot the cross-correlation and autocorrelation of several variables. TODO Due to
