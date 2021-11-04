@@ -87,8 +87,8 @@ file :: [Char] -> Matplotlib -> IO (Either String String)
 file filename m = withMplot m (\s -> python $ pyIncludes (pyBackend "agg") ++ s ++ pyFigure filename)
 
 -- | Get the SVG for a figure
-svg :: Matplotlib -> IO (Either String String)
-svg m = withMplot m (\s -> python $ pyIncludes "" ++ s ++ pySVG)
+toSvg :: Matplotlib -> IO (Either String String)
+toSvg m = withMplot m (\s -> python $ pyIncludes "" ++ s ++ pySVG)
 
 -- * Useful plots
 
