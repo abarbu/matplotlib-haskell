@@ -295,13 +295,13 @@ infixl 6 @@
 m @@ os = option m os
 
 -- | Bind a list of default options to a plot. Positional options are kept in
--- order and default that way as well. Keyword arguments are
-def :: Matplotlib -> [Option] -> Matplotlib
-def m os = optionFn (defFn os) m
+-- order and default that way as well. Keyword arguments are also handled
+bindDefault :: Matplotlib -> [Option] -> Matplotlib
+bindDefault m os = optionFn (bindDefaultFn os) m
 
 -- | Merge two sets of options
-defFn :: [Option] -> [Option] -> [Option]
-defFn os os' = merge ps' ps ++ (nub $ ks' ++ ks)
+bindDefaultFn :: [Option] -> [Option] -> [Option]
+bindDefaultFn os os' = merge ps' ps ++ (nub $ ks' ++ ks)
            where isK (K _ _) = True
                  isK _ = False
                  isP (P _) = True

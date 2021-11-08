@@ -14,9 +14,14 @@ in
 nixpkgs.haskell-nix.stackProject {
   inherit src;
   modules = [({pkgs, ...}: {
-    packages.matplotlib.components.library.build-tools = [ pkgs.buildPackages.python39Packages.matplotlib
-                                                           pkgs.buildPackages.python39Packages.scipy
-                                                           pkgs.buildPackages.texlive.combined.scheme-small ];
+    packages.matplotlib.components.library.build-tools =
+      [ pkgs.buildPackages.python39Packages.matplotlib
+        pkgs.buildPackages.python39Packages.scipy
+        pkgs.buildPackages.texlive.combined.scheme-small ];
+    packages.matplotlib.components.tests.matplotlib-test.build-tools =
+      [ pkgs.buildPackages.python39Packages.matplotlib
+        pkgs.buildPackages.python39Packages.scipy
+        pkgs.buildPackages.texlive.combined.scheme-small ];
     doHaddock = false;
   })];
 }
