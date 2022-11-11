@@ -406,6 +406,9 @@ ylim l u = mp # "ax.set_ylim(" # l # "," # u # ")"
 -- | Add a horizontal line across the axis
 axhline y = mp # "ax.axhline(" # y ## ")"
 
+-- | Add a vertical line across the axis
+axvline x = mp # "ax.axvline(" # x ## ")"
+
 -- | Insert a legend
 legend = mp # "ax.legend(" ## ")"
 
