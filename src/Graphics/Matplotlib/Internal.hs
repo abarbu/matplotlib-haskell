@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, ScopedTypeVariables, FlexibleContexts, ExtendedDefaultRules, ExistentialQuantification, CPP #-}
+{-# LANGUAGE FlexibleInstances, ScopedTypeVariables, FlexibleContexts, ExtendedDefaultRules, ExistentialQuantification, CPP, TemplateHaskell #-}
 -- |
 -- Internal representations of the Matplotlib data. These are not API-stable
 -- and may change. You can easily extend the provided bindings without relying
@@ -10,6 +10,7 @@ import Data.Aeson
 import Control.Monad
 import Control.DeepSeq
 import System.IO
+import System.Which
 import qualified Data.ByteString.Lazy as B
 import Data.List
 import Control.Exception
@@ -316,6 +317,9 @@ bindDefaultFn os os' = merge ps' ps ++ (nub $ ks' ++ ks)
 
 -- $ Python operations
 
+python' :: String
+python' = $(staticWhich "python3") 
+
 -- | Run python given a code string.
 python :: Foldable t => t String -> IO (Either String String)
 python codeStr =
@@ -323,7 +327,7 @@ python codeStr =
          (\codeFile codeHandle -> do
              forM_ codeStr (hPutStrLn codeHandle)
              hClose codeHandle
-             Right <$> readProcess "env" ["python3", codeFile] ""))
+             Right <$> readProcess "python3" [codeFile] ""))
          (\e -> return $ Left $ show (e :: IOException))
 
 pyBackend backend = "matplotlib.use('" ++ backend ++ "')"
