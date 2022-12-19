@@ -140,7 +140,7 @@ m # v | S.null $ mpRest m =
 -- rendered as 'str'.
 data S = S String
   deriving (Show, Eq, Ord)
-
+ 
 -- | A string to be rendered in python as a raw string. In other words it is
 -- rendered as r'str'.
 data R = R String
