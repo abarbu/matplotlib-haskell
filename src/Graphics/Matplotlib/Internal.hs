@@ -327,7 +327,7 @@ python codeStr =
          (\codeFile codeHandle -> do
              forM_ codeStr (hPutStrLn codeHandle)
              hClose codeHandle
-             Right <$> readProcess "python3" [codeFile] ""))
+             Right <$> readProcess python' [codeFile] ""))
          (\e -> return $ Left $ show (e :: IOException))
 
 pyBackend backend = "matplotlib.use('" ++ backend ++ "')"
