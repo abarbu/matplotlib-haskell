@@ -16,7 +16,7 @@ mkDerivation {
   src = ./.;
   libraryHaskellDepends = [
     aeson base bytestring containers deepseq filepath process split
-    temporary
+    temporary which
   ];
   testHaskellDepends = [
     ad base bytestring directory process random raw-strings-qq split
