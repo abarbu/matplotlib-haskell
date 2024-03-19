@@ -1,27 +1,30 @@
+{ mkDerivation, ad, aeson, base, bytestring, containers
+, deepseq, directory, filepath, lib, process, random
+, raw-strings-qq, split, tasty, tasty-expected-failure
+, tasty-golden, tasty-hunit, temporary, which, pkgs
+}:
 let
-  sources = import nix/sources.nix {};
-  haskell-nix = (import sources."haskell.nix" {});
-  nixpkgs = haskell-nix.pkgs;
-  gitignore = (import sources."gitignore.nix" {
-    inherit (nixpkgs) lib;
-  }).gitignoreSource;
-
-  src = nixpkgs.lib.cleanSourceWith {
-    name = "matplotlib";
-    src = gitignore ./.;
-  };
+  python = pkgs.python3.withPackages (p: with p; [
+    matplotlib
+    numpy
+    scipy
+  ]);
 in
-nixpkgs.haskell-nix.stackProject {
-  inherit src;
-  modules = [({pkgs, ...}: {
-    packages.matplotlib.components.library.build-tools =
-      [ pkgs.buildPackages.python39Packages.matplotlib
-        pkgs.buildPackages.python39Packages.scipy
-        pkgs.buildPackages.texlive.combined.scheme-small ];
-    packages.matplotlib.components.tests.matplotlib-test.build-tools =
-      [ pkgs.buildPackages.python39Packages.matplotlib
-        pkgs.buildPackages.python39Packages.scipy
-        pkgs.buildPackages.texlive.combined.scheme-small ];
-    doHaddock = false;
-  })];
+mkDerivation {
+  pname = "matplotlib";
+  version = "0.7.7";
+  src = ./.;
+  libraryHaskellDepends = [
+    aeson base bytestring containers deepseq filepath process split
+    temporary which
+  ];
+  testHaskellDepends = [
+    ad base bytestring directory process random raw-strings-qq split
+    tasty tasty-expected-failure tasty-golden tasty-hunit temporary
+  ];
+  librarySystemDepends = [ python which ];
+  testSystemDepends = [ python which ];
+  homepage = "https://github.com/abarbu/matplotlib-haskell";
+  description = "Bindings to Matplotlib; a Python plotting library";
+  license = lib.licenses.bsd3;
 }
